@@ -31,6 +31,7 @@ data class AppLanguage(
 val APP_LANGUAGES = listOf(
     AppLanguage(tag = "", labelRes = R.string.settings_language_system),
     AppLanguage(tag = "en", endonym = "English"),
+    AppLanguage(tag = "zh-rCN", endonym = "简体中文"),
     AppLanguage(tag = "ar", endonym = "العربية"),
 )
 

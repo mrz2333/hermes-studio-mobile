@@ -2054,7 +2054,7 @@ private fun appearanceLabel(appearance: String): String = stringResource(
     APPEARANCE_LEVELS.firstOrNull { it.first == appearance }?.second ?: R.string.appearance_system,
 )
 
-private const val PHONE_REPOSITORY_URL = "https://github.com/twuijri/hermes-studio-mobile"
+private const val PHONE_REPOSITORY_URL = "https://github.com/mrz2333/hermes-studio-mobile"
 private const val STUDIO_REPOSITORY_URL = "https://github.com/EKKOLearnAI/hermes-studio"
 
 @Composable

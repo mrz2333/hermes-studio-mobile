@@ -23,7 +23,7 @@ enum class InstallResult { OpenedInstaller, PermissionRequired }
 /** Updates the GitHub-distributed APK without involving a third-party service. */
 object AppUpdater {
     private const val RELEASE_API =
-        "https://api.github.com/repos/twuijri/hermes-studio-mobile/releases/tags/latest-debug"
+        "https://api.github.com/repos/mrz2333/hermes-studio-mobile/releases/tags/latest-debug"
     private const val APK_NAME = "hermes-studio-android.apk"
     private val client = OkHttpClient()
 
