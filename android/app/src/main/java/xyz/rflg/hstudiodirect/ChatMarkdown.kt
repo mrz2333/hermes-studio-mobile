@@ -110,10 +110,10 @@ internal fun isTableDelimiterRow(line: String): Boolean {
 }
 
 private fun tableAligns(delimiter: String): List<TextAlign> = splitTableRow(delimiter).map { cell ->
-    val left = cell.startsWith(":")
-    val right = cell.endsWith(":")
+    val leading = cell.startsWith(":")
+    val trailing = cell.endsWith(":")
     when {
-        left && right -> TextAlign.Center
+        leading && trailing -> TextAlign.Center
         right -> TextAlign.Right
         else -> TextAlign.Left
     }
