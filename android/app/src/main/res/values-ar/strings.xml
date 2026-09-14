@@ -4,7 +4,7 @@
   TranslationsTest يرفض أي مفتاح ناقص أو زائد.
 -->
 <resources>
-    <string name="app_name">Hermes Studio</string>
+    <string name="app_name">HStudio Direct</string>
     <string name="launcher_name">H Studio</string>
 
     <!-- إجراءات وتسميات مشتركة -->

@@ -70,6 +70,7 @@ jobs:
 
       - name: Build APK
         env:
+          DEFAULT_STUDIO_URL: ${{ vars.DEFAULT_STUDIO_URL }}
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
         run: gradle --no-daemon assembleRelease
@@ -85,21 +86,17 @@ jobs:
           path: out/hermes-studio-android.apk
 
       - name: Publish rolling build
-        if: github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: latest-debug
-          name: Hermes Studio Mobile ${{ env.MOBILE_VERSION }} — Android
+          tag_name: hstudio-direct
+          name: HStudio 直连 v${{ env.MOBILE_VERSION }} — Android
           body: |
-            Android APK for Hermes Studio Mobile ${{ env.MOBILE_VERSION }}, built from `main`
-            (${{ github.sha }}) and signed with the project key
-            so it installs over the previous version.
+            HStudio 直连 v${{ env.MOBILE_VERSION }} — 直连自建 Hermes Studio：
+            无云服务、无订阅、无登录墙，只填你的服务器地址 + Studio 账号密码。
 
-            Android will warn that Play Protect has not seen this developer —
-            choose **Install anyway**, which is expected for any app installed
-            outside the Play Store.
+            构建自 `main` (${{ github.sha }})，使用项目密钥签名，可直接覆盖安装。
 
-            Coming from a build published before 2026-07-30? Uninstall the old app
-            once first: those builds were signed with a throwaway CI key.
+            Android 会提示「Play 保护机制未见过此开发者」——选择**仍要安装**即可。
           files: out/hermes-studio-android.apk
           prerelease: true

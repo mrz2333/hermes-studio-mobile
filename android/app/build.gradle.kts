@@ -13,19 +13,22 @@ val keystorePath: String? = System.getenv("ANDROID_KEYSTORE_PATH")
 val keystorePassword: String? = System.getenv("ANDROID_KEYSTORE_PASSWORD")
 val keystoreAlias: String? = System.getenv("ANDROID_KEY_ALIAS")
 val hasSigningKey = !keystorePath.isNullOrBlank() && file(keystorePath).exists()
+// 构建时注入的默认 Studio 地址（CI 变量传入，源码不留私有域名）
+val defaultStudioUrl = System.getenv("DEFAULT_STUDIO_URL")?.trim().orEmpty()
 val buildCommit = System.getenv("GITHUB_SHA")?.takeIf { it.matches(Regex("[0-9a-fA-F]{40}")) } ?: "local"
 
 android {
-    namespace = "us.i3u.hermesstudio"
+    namespace = "xyz.rflg.hstudiodirect"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "us.i3u.hermesstudio"
+        applicationId = "xyz.rflg.hstudiodirect"
         minSdk = 26
         targetSdk = 35
         versionCode = 33
         versionName = "1.3.0"
         buildConfigField("String", "BUILD_COMMIT", "\"$buildCommit\"")
+        buildConfigField("String", "DEFAULT_STUDIO_URL", "\"$defaultStudioUrl\"")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
