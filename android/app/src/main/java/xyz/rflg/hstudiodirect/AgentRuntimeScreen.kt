@@ -85,7 +85,7 @@ private fun RuntimeCard(runtime: AgentRuntimeStatus, viewModel: AppViewModel) {
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
     ) {
         Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Surface(shape = CircleShape, color = when (runtime.family) { "hermes" -> Color(0xFF7A5CFF); "ekko" -> Color(0xFF2AAE88); else -> Color(0xFF4D8DFF) }) {
+            Surface(shape = CircleShape, color = when (runtime.family) { "hermes" -> Color(0xFF4CA66A); "ekko" -> Color(0xFF4CA66A); else -> Color(0xFF007AFF) }) {
                 Icon(if (runtime.family == "coding") Icons.Filled.Code else Icons.Filled.Psychology, null, Modifier.padding(11.dp).size(23.dp), tint = Color.White)
             }
             Spacer(Modifier.width(13.dp))
@@ -99,7 +99,7 @@ private fun RuntimeCard(runtime: AgentRuntimeStatus, viewModel: AppViewModel) {
                 )
                 runtime.error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
             }
-            Surface(shape = CircleShape, color = if (runtime.installed) Color(0xFF43C879).copy(alpha = .16f) else MaterialTheme.colorScheme.errorContainer) {
+            Surface(shape = CircleShape, color = if (runtime.installed) Color(0xFF4CA66A).copy(alpha = .16f) else MaterialTheme.colorScheme.errorContainer) {
                 Text(
                     stringResource(if (runtime.installed) R.string.agent_runtime_ready else R.string.agent_runtime_not_installed),
                     Modifier.padding(horizontal = 10.dp, vertical = 6.dp),

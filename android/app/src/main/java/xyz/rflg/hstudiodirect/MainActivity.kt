@@ -733,7 +733,7 @@ private fun RoomRow(room: Room, onClick: () -> Unit, onLongClick: () -> Unit) {
     ) {
         Box(
             modifier = Modifier.size(50.dp).clip(RoundedCornerShape(15.dp)).background(
-                Brush.linearGradient(listOf(MaterialTheme.colorScheme.primary, Color(0xFF4389FF))),
+                Brush.linearGradient(listOf(MaterialTheme.colorScheme.primary, Color(0xFF4CA66A))),
             ),
             contentAlignment = Alignment.Center,
         ) {
@@ -1527,7 +1527,7 @@ private fun ToolStepRow(tool: ChatToolStep, nowMillis: Long) {
                     Icons.Filled.Check,
                     contentDescription = stringResource(R.string.tool_status_done),
                     modifier = Modifier.size(17.dp),
-                    tint = androidx.compose.ui.graphics.Color(0xFF67C650),
+                    tint = androidx.compose.ui.graphics.Color(0xFF4CA66A),
                 )
                 ToolRunStatus.Error -> Icon(
                     Icons.Filled.Close,
@@ -1998,7 +1998,7 @@ private fun ContextUsage(state: UiState) {
     } else 0f
     val color = when {
         ratio > .8f -> MaterialTheme.colorScheme.error
-        ratio > .6f -> Color(0xFFD59A2D)
+        ratio > .6f -> Color(0xFFC28A30)
         else -> MaterialTheme.colorScheme.onSurfaceVariant
     }
     Column(modifier = Modifier.widthIn(min = 84.dp, max = 122.dp)) {
@@ -2502,7 +2502,7 @@ private fun AgentHubScreen(state: UiState, viewModel: AppViewModel) {
                 StudioGroupedCard {
                     StudioDestinationRow(
                         icon = Icons.Filled.Psychology,
-                        color = Color(0xFF7A5CFF),
+                        color = Color(0xFF4CA66A),
                         title = stringResource(R.string.agent_runtimes_title),
                         subtitle = stringResource(R.string.agent_runtimes_hub_note),
                         onClick = { viewModel.openAgentRuntimes() },
@@ -2526,7 +2526,7 @@ private fun AgentHubScreen(state: UiState, viewModel: AppViewModel) {
                             )
                         }
                         Surface(
-                            color = Color(0xFF43C879).copy(alpha = 0.16f),
+                            color = Color(0xFF4CA66A).copy(alpha = 0.16f),
                             shape = RoundedCornerShape(50.dp),
                         ) {
                             Text(
@@ -2535,7 +2535,7 @@ private fun AgentHubScreen(state: UiState, viewModel: AppViewModel) {
                                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
                                 style = MaterialTheme.typography.labelMedium,
                                 fontWeight = FontWeight.SemiBold,
-                                color = Color(0xFF43C879),
+                                color = Color(0xFF4CA66A),
                             )
                         }
                     }
@@ -2547,7 +2547,7 @@ private fun AgentHubScreen(state: UiState, viewModel: AppViewModel) {
                 StudioGroupedCard {
                     StudioDestinationRow(
                         icon = Icons.Filled.AccountTree,
-                        color = Color(0xFF35B7DB),
+                        color = Color(0xFF007AFF),
                         title = stringResource(R.string.workflows_title),
                         subtitle = stringResource(R.string.workflows_hub_note),
                         onClick = { viewModel.openWorkflows() },
@@ -2555,7 +2555,7 @@ private fun AgentHubScreen(state: UiState, viewModel: AppViewModel) {
                     StudioCardDivider()
                     StudioDestinationRow(
                         icon = Icons.Filled.Schedule,
-                        color = Color(0xFF4D8DFF),
+                        color = Color(0xFF007AFF),
                         title = stringResource(R.string.cron_title),
                         subtitle = stringResource(R.string.settings_group_cron_note),
                         onClick = { viewModel.openCronJobs() },
@@ -2563,7 +2563,7 @@ private fun AgentHubScreen(state: UiState, viewModel: AppViewModel) {
                     StudioCardDivider()
                     StudioDestinationRow(
                         icon = Icons.Filled.ViewKanban,
-                        color = Color(0xFFFF9F43),
+                        color = Color(0xFFC28A30),
                         title = stringResource(R.string.agent_hub_kanban),
                         subtitle = stringResource(R.string.agent_hub_kanban_note),
                         onClick = { viewModel.openKanban() },
@@ -2571,7 +2571,7 @@ private fun AgentHubScreen(state: UiState, viewModel: AppViewModel) {
                     StudioCardDivider()
                     StudioDestinationRow(
                         icon = Icons.Filled.Forum,
-                        color = Color(0xFF45C878),
+                        color = Color(0xFF4CA66A),
                         title = stringResource(R.string.settings_channels),
                         subtitle = if (channels.isEmpty()) {
                             stringResource(R.string.settings_group_channels_note)
@@ -2592,43 +2592,43 @@ private fun AgentHubScreen(state: UiState, viewModel: AppViewModel) {
                 StudioGroupedCard {
                     StudioDestinationRow(
                         icon = Icons.Filled.Insights,
-                        color = Color(0xFF7A5CFF),
+                        color = Color(0xFF4CA66A),
                         title = stringResource(R.string.insights_title),
                         subtitle = stringResource(R.string.insights_subtitle),
                         onClick = { viewModel.openInsights() },
                     )
                     StudioCardDivider()
-                    StudioDestinationRow(Icons.Filled.Folder, Color(0xFFFFB547), stringResource(R.string.files_title), stringResource(R.string.files_hub_note), { viewModel.openFiles() })
+                    StudioDestinationRow(Icons.Filled.Folder, Color(0xFFC28A30), stringResource(R.string.files_title), stringResource(R.string.files_hub_note), { viewModel.openFiles() })
                     StudioCardDivider()
-                    StudioDestinationRow(Icons.Filled.History, Color(0xFF4D8DFF), stringResource(R.string.logs_title), stringResource(R.string.logs_hub_note), { viewModel.openLogs() })
+                    StudioDestinationRow(Icons.Filled.History, Color(0xFF007AFF), stringResource(R.string.logs_title), stringResource(R.string.logs_hub_note), { viewModel.openLogs() })
                     StudioCardDivider()
-                    StudioDestinationRow(Icons.Filled.Dns, Color(0xFF2AAE88), stringResource(R.string.connections_title), stringResource(R.string.connections_hub_note), { viewModel.openConnections() })
+                    StudioDestinationRow(Icons.Filled.Dns, Color(0xFF4CA66A), stringResource(R.string.connections_title), stringResource(R.string.connections_hub_note), { viewModel.openConnections() })
                     StudioCardDivider()
-                    StudioDestinationRow(Icons.Filled.AccountTree, Color(0xFF35B7DB), stringResource(R.string.journey_title), stringResource(R.string.journey_note), { viewModel.openJourney() })
+                    StudioDestinationRow(Icons.Filled.AccountTree, Color(0xFF007AFF), stringResource(R.string.journey_title), stringResource(R.string.journey_note), { viewModel.openJourney() })
                     StudioCardDivider()
-                    StudioDestinationRow(Icons.Filled.Link, Color(0xFFFF9F43), stringResource(R.string.webhooks_title), stringResource(R.string.webhooks_note), { viewModel.openWebhooks() })
+                    StudioDestinationRow(Icons.Filled.Link, Color(0xFFC28A30), stringResource(R.string.webhooks_title), stringResource(R.string.webhooks_note), { viewModel.openWebhooks() })
                     StudioCardDivider()
-                    StudioDestinationRow(Icons.Filled.SystemUpdate, Color(0xFF45C878), stringResource(R.string.runtime_versions_title), stringResource(R.string.runtime_versions_note), { viewModel.openRuntimeVersions() })
+                    StudioDestinationRow(Icons.Filled.SystemUpdate, Color(0xFF4CA66A), stringResource(R.string.runtime_versions_title), stringResource(R.string.runtime_versions_note), { viewModel.openRuntimeVersions() })
                     StudioCardDivider()
-                    StudioDestinationRow(Icons.Filled.Palette, Color(0xFFB45CFF), stringResource(R.string.appearance_title), stringResource(R.string.appearance_note), { viewModel.openAppearance() })
+                    StudioDestinationRow(Icons.Filled.Palette, Color(0xFF4CA66A), stringResource(R.string.appearance_title), stringResource(R.string.appearance_note), { viewModel.openAppearance() })
                 }
             }
 
             item { StudioSectionTitle(stringResource(R.string.global_agent_title)) }
             item {
                 StudioGroupedCard {
-                    StudioDestinationRow(Icons.Filled.AutoAwesome, Color(0xFF2AAE88), stringResource(R.string.global_agent_title), stringResource(R.string.global_agent_hub_note), { viewModel.openGlobalAgent() })
+                    StudioDestinationRow(Icons.Filled.AutoAwesome, Color(0xFF4CA66A), stringResource(R.string.global_agent_title), stringResource(R.string.global_agent_hub_note), { viewModel.openGlobalAgent() })
                 }
             }
 
             item { StudioSectionTitle(stringResource(R.string.agent_hub_capabilities)) }
             item {
                 StudioGroupedCard {
-                    StudioDestinationRow(Icons.Filled.School, Color(0xFF7A5CFF), stringResource(R.string.agent_hub_skills), stringResource(R.string.agent_hub_skills_note), { viewModel.openSkills() })
+                    StudioDestinationRow(Icons.Filled.School, Color(0xFF4CA66A), stringResource(R.string.agent_hub_skills), stringResource(R.string.agent_hub_skills_note), { viewModel.openSkills() })
                     StudioCardDivider()
-                    StudioDestinationRow(Icons.Filled.Extension, Color(0xFFB45CFF), stringResource(R.string.agent_hub_plugins), stringResource(R.string.agent_hub_plugins_note), { viewModel.openPlugins() })
+                    StudioDestinationRow(Icons.Filled.Extension, Color(0xFF4CA66A), stringResource(R.string.agent_hub_plugins), stringResource(R.string.agent_hub_plugins_note), { viewModel.openPlugins() })
                     StudioCardDivider()
-                    StudioDestinationRow(Icons.Filled.Cable, Color(0xFF35B7DB), stringResource(R.string.agent_hub_mcp), stringResource(R.string.agent_hub_mcp_note), { viewModel.openMcp() })
+                    StudioDestinationRow(Icons.Filled.Cable, Color(0xFF007AFF), stringResource(R.string.agent_hub_mcp), stringResource(R.string.agent_hub_mcp_note), { viewModel.openMcp() })
                     StudioCardDivider()
                 }
             }
@@ -2636,16 +2636,16 @@ private fun AgentHubScreen(state: UiState, viewModel: AppViewModel) {
             item { StudioSectionTitle(stringResource(R.string.ekko_hub_title)) }
             item {
                 StudioGroupedCard {
-                    StudioDestinationRow(Icons.Filled.Psychology, Color(0xFF2AAE88), stringResource(R.string.ekko_hub_title), stringResource(R.string.ekko_hub_note), { viewModel.openEkkoHub() })
+                    StudioDestinationRow(Icons.Filled.Psychology, Color(0xFF4CA66A), stringResource(R.string.ekko_hub_title), stringResource(R.string.ekko_hub_note), { viewModel.openEkkoHub() })
                 }
             }
 
             item { StudioSectionTitle(stringResource(R.string.agent_hub_intelligence)) }
             item {
                 StudioGroupedCard {
-                    StudioDestinationRow(Icons.Filled.Memory, Color(0xFFFFB547), stringResource(R.string.settings_group_memory), stringResource(R.string.settings_group_memory_note), { viewModel.openSettingsGroup(SettingsGroup.Memory) })
+                    StudioDestinationRow(Icons.Filled.Memory, Color(0xFFC28A30), stringResource(R.string.settings_group_memory), stringResource(R.string.settings_group_memory_note), { viewModel.openSettingsGroup(SettingsGroup.Memory) })
                     StudioCardDivider()
-                    StudioDestinationRow(Icons.Filled.ModelTraining, Color(0xFF39C6A3), stringResource(R.string.settings_group_models), stringResource(R.string.settings_group_models_note), { viewModel.openSettingsGroup(SettingsGroup.Models) })
+                    StudioDestinationRow(Icons.Filled.ModelTraining, Color(0xFF4CA66A), stringResource(R.string.settings_group_models), stringResource(R.string.settings_group_models_note), { viewModel.openSettingsGroup(SettingsGroup.Models) })
                 }
             }
         }
@@ -2775,7 +2775,7 @@ private fun SettingsScreen(state: UiState, viewModel: AppViewModel) {
                     StudioCardDivider()
                     StudioDestinationRow(
                         icon = Icons.Filled.Person,
-                        color = Color(0xFF4D8DFF),
+                        color = Color(0xFF007AFF),
                         title = stringResource(R.string.action_profiles),
                         subtitle = state.activeProfile,
                         onClick = { viewModel.openProfiles() },
@@ -2783,7 +2783,7 @@ private fun SettingsScreen(state: UiState, viewModel: AppViewModel) {
                     StudioCardDivider()
                     StudioDestinationRow(
                         icon = Icons.Filled.Dns,
-                        color = Color(0xFF35C878),
+                        color = Color(0xFF4CA66A),
                         title = stringResource(R.string.settings_studio_connection),
                         subtitle = state.baseUrl,
                         onClick = { viewModel.openSettingsGroup(SettingsGroup.Server) },
@@ -2796,7 +2796,7 @@ private fun SettingsScreen(state: UiState, viewModel: AppViewModel) {
                 StudioGroupedCard {
                     StudioDestinationRow(
                         icon = Icons.Filled.DisplaySettings,
-                        color = Color(0xFF6F72E8),
+                        color = Color(0xFF007AFF),
                         title = stringResource(R.string.settings_appearance),
                         subtitle = appearanceLabel(state.appearance),
                         onClick = { appearanceSheet = true },
@@ -2804,7 +2804,7 @@ private fun SettingsScreen(state: UiState, viewModel: AppViewModel) {
                     StudioCardDivider()
                     StudioDestinationRow(
                         icon = Icons.Filled.Language,
-                        color = Color(0xFF18B9C7),
+                        color = Color(0xFF007AFF),
                         title = stringResource(R.string.settings_language),
                         subtitle = AppLocale.labelFor(context, language),
                         onClick = { languageSheet = true },
@@ -2812,7 +2812,7 @@ private fun SettingsScreen(state: UiState, viewModel: AppViewModel) {
                     StudioCardDivider()
                     StudioDestinationRow(
                         icon = Icons.Filled.Psychology,
-                        color = Color(0xFFD62AE8),
+                        color = Color(0xFFC28A30),
                         title = stringResource(R.string.settings_reasoning),
                         subtitle = reasoningLabel(state.reasoningEffort),
                         onClick = { reasoningSheet = true },
@@ -2825,7 +2825,7 @@ private fun SettingsScreen(state: UiState, viewModel: AppViewModel) {
                 StudioGroupedCard {
                     StudioDestinationRow(
                         icon = Icons.Filled.Tune,
-                        color = Color(0xFFFF9F43),
+                        color = Color(0xFFC28A30),
                         title = stringResource(R.string.more_settings_title),
                         subtitle = stringResource(R.string.more_settings_note),
                         onClick = { viewModel.openMoreSettings() },
@@ -2846,7 +2846,7 @@ private fun SettingsScreen(state: UiState, viewModel: AppViewModel) {
                 StudioGroupedCard {
                     StudioDestinationRow(
                         icon = Icons.Filled.PhoneAndroid,
-                        color = Color(0xFF7A5CFF),
+                        color = Color(0xFF4CA66A),
                         title = stringResource(R.string.settings_phone_name),
                         trailing = {
                             Text(
@@ -2926,31 +2926,31 @@ private fun MoreSettingsScreen(state: UiState, viewModel: AppViewModel) {
             item { StudioSectionTitle(stringResource(R.string.more_settings_agent)) }
             item {
                 StudioGroupedCard {
-                    StudioDestinationRow(Icons.Filled.Tune, Color(0xFF7A5CFF), stringResource(R.string.settings_group_agent), stringResource(R.string.settings_group_agent_note), { viewModel.openSettingsGroup(SettingsGroup.Agent) })
+                    StudioDestinationRow(Icons.Filled.Tune, Color(0xFF4CA66A), stringResource(R.string.settings_group_agent), stringResource(R.string.settings_group_agent_note), { viewModel.openSettingsGroup(SettingsGroup.Agent) })
                     StudioCardDivider()
-                    StudioDestinationRow(Icons.Filled.Memory, Color(0xFFFFB547), stringResource(R.string.settings_group_memory), stringResource(R.string.settings_group_memory_note), { viewModel.openSettingsGroup(SettingsGroup.Memory) })
+                    StudioDestinationRow(Icons.Filled.Memory, Color(0xFFC28A30), stringResource(R.string.settings_group_memory), stringResource(R.string.settings_group_memory_note), { viewModel.openSettingsGroup(SettingsGroup.Memory) })
                     StudioCardDivider()
-                    StudioDestinationRow(Icons.Filled.Compress, Color(0xFFFF9F43), stringResource(R.string.settings_group_compression), stringResource(R.string.settings_group_compression_note), { viewModel.openSettingsGroup(SettingsGroup.Compression) })
+                    StudioDestinationRow(Icons.Filled.Compress, Color(0xFFC28A30), stringResource(R.string.settings_group_compression), stringResource(R.string.settings_group_compression_note), { viewModel.openSettingsGroup(SettingsGroup.Compression) })
                     StudioCardDivider()
-                    StudioDestinationRow(Icons.Filled.ModelTraining, Color(0xFF39C6A3), stringResource(R.string.settings_group_models), stringResource(R.string.settings_group_models_note), { viewModel.openSettingsGroup(SettingsGroup.Models) })
+                    StudioDestinationRow(Icons.Filled.ModelTraining, Color(0xFF4CA66A), stringResource(R.string.settings_group_models), stringResource(R.string.settings_group_models_note), { viewModel.openSettingsGroup(SettingsGroup.Models) })
                 }
             }
 
             item { StudioSectionTitle(stringResource(R.string.more_settings_conversation)) }
             item {
                 StudioGroupedCard {
-                    StudioDestinationRow(Icons.Filled.DisplaySettings, Color(0xFFFF6584), stringResource(R.string.settings_group_display), stringResource(R.string.settings_group_display_note), { viewModel.openSettingsGroup(SettingsGroup.Display) })
+                    StudioDestinationRow(Icons.Filled.DisplaySettings, Color(0xFFE64340), stringResource(R.string.settings_group_display), stringResource(R.string.settings_group_display_note), { viewModel.openSettingsGroup(SettingsGroup.Display) })
                     StudioCardDivider()
-                    StudioDestinationRow(Icons.Filled.History, Color(0xFF6F72E8), stringResource(R.string.settings_group_sessions), stringResource(R.string.settings_group_sessions_note), { viewModel.openSettingsGroup(SettingsGroup.Sessions) })
+                    StudioDestinationRow(Icons.Filled.History, Color(0xFF007AFF), stringResource(R.string.settings_group_sessions), stringResource(R.string.settings_group_sessions_note), { viewModel.openSettingsGroup(SettingsGroup.Sessions) })
                 }
             }
 
             item { StudioSectionTitle(stringResource(R.string.more_settings_network_privacy)) }
             item {
                 StudioGroupedCard {
-                    StudioDestinationRow(Icons.Filled.VpnLock, Color(0xFF18B9C7), stringResource(R.string.settings_group_proxy), stringResource(R.string.settings_group_proxy_note), { viewModel.openSettingsGroup(SettingsGroup.Proxy) })
+                    StudioDestinationRow(Icons.Filled.VpnLock, Color(0xFF007AFF), stringResource(R.string.settings_group_proxy), stringResource(R.string.settings_group_proxy_note), { viewModel.openSettingsGroup(SettingsGroup.Proxy) })
                     StudioCardDivider()
-                    StudioDestinationRow(Icons.Filled.PrivacyTip, Color(0xFFE85262), stringResource(R.string.settings_group_privacy), stringResource(R.string.settings_group_privacy_note), { viewModel.openSettingsGroup(SettingsGroup.Privacy) })
+                    StudioDestinationRow(Icons.Filled.PrivacyTip, Color(0xFFE64340), stringResource(R.string.settings_group_privacy), stringResource(R.string.settings_group_privacy_note), { viewModel.openSettingsGroup(SettingsGroup.Privacy) })
                 }
             }
 
@@ -2960,7 +2960,7 @@ private fun MoreSettingsScreen(state: UiState, viewModel: AppViewModel) {
                     StudioGroupedCard {
                         StudioDestinationRow(
                             icon = Icons.Filled.Group,
-                            color = Color(0xFF35B7DB),
+                            color = Color(0xFF007AFF),
                             title = stringResource(R.string.settings_group_users),
                             subtitle = stringResource(R.string.settings_group_users_note),
                             onClick = { viewModel.openSettingsGroup(SettingsGroup.Users) },
@@ -3576,7 +3576,7 @@ private fun ChannelsScreen(state: UiState, viewModel: AppViewModel) {
                                 .size(11.dp)
                                 .clip(RoundedCornerShape(99.dp))
                                 .background(
-                                    if (connected) Color(0xFF30D158)
+                                    if (connected) Color(0xFF4CA66A)
                                     else MaterialTheme.colorScheme.outlineVariant,
                                 ),
                         )
@@ -3681,12 +3681,12 @@ private fun ChannelScreen(state: UiState, viewModel: AppViewModel) {
                 Surface(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
                     shape = RoundedCornerShape(16.dp),
-                    color = Color(0xFFFF9500).copy(alpha = 0.14f),
+                    color = Color(0xFFC28A30).copy(alpha = 0.14f),
                 ) {
                     Text(
                         stringResource(R.string.channel_exclusive_warning),
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFFFFB340),
+                        color = Color(0xFFC28A30),
                         modifier = Modifier.padding(14.dp),
                     )
                 }
