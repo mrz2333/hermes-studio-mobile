@@ -1299,7 +1299,7 @@ private fun MessageBubble(
                 ),
                 colors = CardDefaults.cardColors(containerColor = container),
             ) {
-                Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     line.sender?.let {
                         Text(
                             it,

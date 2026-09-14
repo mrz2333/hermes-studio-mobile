@@ -1,20 +1,31 @@
 package xyz.rflg.hstudiodirect
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
@@ -22,6 +33,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextDirection
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -33,8 +45,78 @@ internal sealed interface ChatMarkdownBlock {
     data class Heading(val level: Int, override val text: String) : ChatMarkdownBlock
     data class Unordered(val indent: Int, override val text: String) : ChatMarkdownBlock
     data class Ordered(val indent: Int, val marker: String, override val text: String) : ChatMarkdownBlock
+    data class Task(val indent: Int, val checked: Boolean, override val text: String) : ChatMarkdownBlock
     data class Quote(override val text: String) : ChatMarkdownBlock
-    data class Code(override val text: String) : ChatMarkdownBlock
+    data class Code(override val text: String, val language: String = "") : ChatMarkdownBlock
+
+    /** GFM pipe table: | a | b | with a |---|---| delimiter row. */
+    data class Table(
+        val header: List<String>,
+        val aligns: List<TextAlign>,
+        val rows: List<List<String>>,
+    ) : ChatMarkdownBlock {
+        override val text: String get() = ""
+    }
+
+    /** --- / *** / ___ */
+    data object Rule : ChatMarkdownBlock {
+        override val text: String get() = ""
+    }
+}
+
+private val TABLE_DELIMITER = Regex("^:?-{1,}:?$")
+private val BARE_URL = Regex("""https?://[^\s<>()\[\]{}"'`]+""")
+private val FENCE_LANGUAGES = mapOf(
+    "kt" to "kotlin", "kts" to "kotlin", "js" to "javascript", "ts" to "typescript",
+    "py" to "python", "sh" to "shell", "bash" to "shell", "zsh" to "shell",
+    "yml" to "yaml", "md" to "markdown", "rb" to "ruby", "rs" to "rust",
+    "cs" to "csharp", "c++" to "cpp", "ps1" to "powershell", "text" to "", "plain" to "",
+)
+
+/** Splits a table row on unescaped pipes; keeps `\|` as a literal pipe. */
+internal fun splitTableRow(line: String): List<String> {
+    var body = line.trim()
+    if (body.startsWith("|")) body = body.drop(1)
+    if (body.endsWith("|") && !body.endsWith("\\|")) body = body.dropLast(1)
+    val cells = mutableListOf<String>()
+    val cell = StringBuilder()
+    var index = 0
+    while (index < body.length) {
+        val char = body[index]
+        when {
+            char == '\\' && body.getOrNull(index + 1) == '|' -> {
+                cell.append('|')
+                index += 2
+            }
+            char == '|' -> {
+                cells += cell.toString().trim()
+                cell.clear()
+                index++
+            }
+            else -> {
+                cell.append(char)
+                index++
+            }
+        }
+    }
+    cells += cell.toString().trim()
+    return cells
+}
+
+internal fun isTableDelimiterRow(line: String): Boolean {
+    if (!line.contains('-')) return false
+    val cells = splitTableRow(line)
+    return cells.isNotEmpty() && cells.all { it.isNotEmpty() && TABLE_DELIMITER.matches(it) }
+}
+
+private fun tableAligns(delimiter: String): List<TextAlign> = splitTableRow(delimiter).map { cell ->
+    val left = cell.startsWith(":")
+    val right = cell.endsWith(":")
+    when {
+        left && right -> TextAlign.Center
+        right -> TextAlign.Right
+        else -> TextAlign.Left
+    }
 }
 
 internal fun parseChatMarkdown(source: String): List<ChatMarkdownBlock> {
@@ -42,7 +124,9 @@ internal fun parseChatMarkdown(source: String): List<ChatMarkdownBlock> {
     val blocks = mutableListOf<ChatMarkdownBlock>()
     val paragraph = mutableListOf<String>()
     val code = mutableListOf<String>()
-    var inFence = false
+    var fence = ""
+    var fenceLanguage = ""
+    var index = 0
 
     fun flushParagraph() {
         if (paragraph.isNotEmpty()) {
@@ -51,50 +135,111 @@ internal fun parseChatMarkdown(source: String): List<ChatMarkdownBlock> {
         }
     }
     fun flushCode() {
-        if (code.isNotEmpty()) {
-            blocks += ChatMarkdownBlock.Code(code.joinToString("\n"))
+        if (code.isNotEmpty() || fenceLanguage.isNotEmpty()) {
+            blocks += ChatMarkdownBlock.Code(code.joinToString("\n"), fenceLanguage)
             code.clear()
+            fenceLanguage = ""
         }
     }
 
-    lines.forEach { raw ->
+    while (index < lines.size) {
+        val raw = lines[index]
         val trimmed = raw.trim()
+
         if (trimmed.startsWith("```") || trimmed.startsWith("~~~")) {
             flushParagraph()
-            if (inFence) flushCode()
-            inFence = !inFence
-            return@forEach
+            if (fence.isNotEmpty()) {
+                flushCode()
+                fence = ""
+            } else {
+                fence = trimmed.take(3)
+                val tag = trimmed.drop(3).trim().lowercase().substringBefore(' ')
+                fenceLanguage = FENCE_LANGUAGES[tag] ?: tag.take(14)
+            }
+            index++
+            continue
         }
-        if (inFence) {
+        if (fence.isNotEmpty()) {
             code += raw
-            return@forEach
+            index++
+            continue
         }
         if (trimmed.isEmpty()) {
             flushParagraph()
-            return@forEach
+            index++
+            continue
         }
 
-        parseHeading(trimmed)?.let {
+        // --- / *** / ___ horizontal rule
+        if (trimmed.length >= 3 && trimmed.all { it == '-' || it == '*' || it == '_' } &&
+            trimmed.toSet().size == 1
+        ) {
             flushParagraph()
-            blocks += it
-            return@forEach
+            blocks += ChatMarkdownBlock.Rule
+            index++
+            continue
         }
-        parseUnordered(raw)?.let {
+
+        // GFM table: a pipe row followed by a delimiter row.
+        if (trimmed.contains('|') && index + 1 < lines.size && isTableDelimiterRow(lines[index + 1])) {
             flushParagraph()
-            blocks += it
-            return@forEach
+            val header = splitTableRow(trimmed)
+            val aligns = tableAligns(lines[index + 1]).let { list ->
+                List(header.size) { list.getOrElse(it) { TextAlign.Left } }
+            }
+            val rows = mutableListOf<List<String>>()
+            var cursor = index + 2
+            while (cursor < lines.size) {
+                val candidate = lines[cursor].trim()
+                if (candidate.isEmpty() || !candidate.contains('|')) break
+                if (isTableDelimiterRow(candidate)) break
+                val cells = splitTableRow(candidate)
+                rows += List(header.size) { cells.getOrElse(it) { "" } }
+                cursor++
+            }
+            blocks += ChatMarkdownBlock.Table(header, aligns, rows)
+            index = cursor
+            continue
         }
-        parseOrdered(raw)?.let {
+
+        val heading = parseHeading(trimmed)
+        if (heading != null) {
             flushParagraph()
-            blocks += it
-            return@forEach
+            blocks += heading
+            index++
+            continue
         }
-        if (trimmed.startsWith("> ")) {
+        val task = parseTask(raw)
+        if (task != null) {
             flushParagraph()
-            blocks += ChatMarkdownBlock.Quote(trimmed.drop(2))
-            return@forEach
+            blocks += task
+            index++
+            continue
         }
+        val unordered = parseUnordered(raw)
+        if (unordered != null) {
+            flushParagraph()
+            blocks += unordered
+            index++
+            continue
+        }
+        val ordered = parseOrdered(raw)
+        if (ordered != null) {
+            flushParagraph()
+            blocks += ordered
+            index++
+            continue
+        }
+
+        if (trimmed.startsWith("> ") || trimmed == ">") {
+            flushParagraph()
+            blocks += ChatMarkdownBlock.Quote(trimmed.removePrefix(">").trimStart())
+            index++
+            continue
+        }
+
         paragraph += trimmed
+        index++
     }
     flushParagraph()
     flushCode()
@@ -104,7 +249,21 @@ internal fun parseChatMarkdown(source: String): List<ChatMarkdownBlock> {
 private fun parseHeading(line: String): ChatMarkdownBlock.Heading? {
     val level = line.takeWhile { it == '#' }.length
     if (level !in 1..6 || line.getOrNull(level) != ' ') return null
-    return ChatMarkdownBlock.Heading(level, line.drop(level + 1))
+    return ChatMarkdownBlock.Heading(level, line.drop(level + 1).trim())
+}
+
+private fun parseTask(line: String): ChatMarkdownBlock.Task? {
+    val prefix = line.takeWhile { it == ' ' || it == '\t' }
+    val value = line.drop(prefix.length)
+    if (value.length < 5) return null
+    if (value[0] !in charArrayOf('-', '*', '+') || value[1] != ' ') return null
+    if (value.getOrNull(2) != '[') return null
+    val check = value.getOrNull(3) ?: return null
+    if (value.getOrNull(4) != ']') return null
+    if (check != ' ' && check != 'x' && check != 'X') return null
+    val rest = value.drop(5).trimStart()
+    val spaces = prefix.fold(0) { total, char -> total + if (char == '\t') 2 else 1 }
+    return ChatMarkdownBlock.Task(spaces / 2, check != ' ', rest)
 }
 
 private fun parseUnordered(line: String): ChatMarkdownBlock.Unordered? {
@@ -134,6 +293,17 @@ internal fun chatMarkdownInline(
     appendMarkdown(source, 0, source.length, linkColor, codeBackground)
 }
 
+/** Trailing punctuation that belongs to the sentence, not to the URL. */
+private fun trimUrl(raw: String): String = raw.trimEnd('.', ',', ';', ':', '!', '?', ')', ']', '}', '"', '\'')
+
+private fun AnnotatedString.Builder.appendLink(url: String, linkColor: Color, label: String? = null) {
+    pushLink(LinkAnnotation.Url(url))
+    pushStyle(SpanStyle(color = linkColor, textDecoration = TextDecoration.Underline))
+    append(label ?: url)
+    pop()
+    pop()
+}
+
 private fun AnnotatedString.Builder.appendMarkdown(
     source: String,
     start: Int,
@@ -143,8 +313,9 @@ private fun AnnotatedString.Builder.appendMarkdown(
 ) {
     var index = start
     while (index < end) {
+        val char = source[index]
         when {
-            source[index] == '\\' && index + 1 < end -> {
+            char == '\\' && index + 1 < end -> {
                 append(source[index + 1])
                 index += 2
             }
@@ -161,7 +332,19 @@ private fun AnnotatedString.Builder.appendMarkdown(
                     index += 2
                 }
             }
-            source[index] == '`' -> {
+            source.startsWith("~~", index) -> {
+                val close = source.indexOf("~~", index + 2).takeIf { it in (index + 2)..<end }
+                if (close != null) {
+                    pushStyle(SpanStyle(textDecoration = TextDecoration.LineThrough))
+                    appendMarkdown(source, index + 2, close, linkColor, codeBackground)
+                    pop()
+                    index = close + 2
+                } else {
+                    append("~~")
+                    index += 2
+                }
+            }
+            char == '`' -> {
                 val close = source.indexOf('`', index + 1).takeIf { it in (index + 1)..<end }
                 if (close != null) {
                     pushStyle(SpanStyle(fontFamily = FontFamily.Monospace, background = codeBackground))
@@ -173,7 +356,7 @@ private fun AnnotatedString.Builder.appendMarkdown(
                     index++
                 }
             }
-            source[index] == '[' -> {
+            char == '[' -> {
                 val labelEnd = source.indexOf(']', index + 1)
                 val urlStart = labelEnd + 1
                 val urlEnd = if (labelEnd in (index + 1)..<end && source.getOrNull(urlStart) == '(') {
@@ -181,7 +364,7 @@ private fun AnnotatedString.Builder.appendMarkdown(
                 } else -1
                 if (urlEnd in (urlStart + 1)..<end) {
                     val url = source.substring(urlStart + 1, urlEnd)
-                    pushStringAnnotation("URL", url)
+                    pushLink(LinkAnnotation.Url(url))
                     pushStyle(SpanStyle(color = linkColor, textDecoration = TextDecoration.Underline))
                     appendMarkdown(source, index + 1, labelEnd, linkColor, codeBackground)
                     pop()
@@ -192,8 +375,19 @@ private fun AnnotatedString.Builder.appendMarkdown(
                     index++
                 }
             }
-            source[index] == '*' || source[index] == '_' -> {
-                val delimiter = source[index]
+            source.startsWith("http://", index) || source.startsWith("https://", index) -> {
+                val match = BARE_URL.find(source, index)?.takeIf { it.range.first == index }
+                if (match != null) {
+                    val url = trimUrl(match.value)
+                    appendLink(url, linkColor)
+                    index += url.length
+                } else {
+                    append(char)
+                    index++
+                }
+            }
+            char == '*' || char == '_' -> {
+                val delimiter = char
                 val close = source.indexOf(delimiter, index + 1).takeIf { it in (index + 1)..<end }
                 if (close != null) {
                     pushStyle(SpanStyle(fontStyle = FontStyle.Italic))
@@ -206,7 +400,7 @@ private fun AnnotatedString.Builder.appendMarkdown(
                 }
             }
             else -> {
-                append(source[index])
+                append(char)
                 index++
             }
         }
@@ -232,42 +426,43 @@ internal fun chatTextDirection(text: String): TextDirection {
 
 @Composable
 internal fun ChatMarkdownText(text: String, modifier: Modifier = Modifier) {
-    val linkColor = MaterialTheme.colorScheme.primary
-    val codeBackground = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f)
     Column(
         modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+        verticalArrangement = Arrangement.spacedBy(5.dp),
     ) {
         parseChatMarkdown(text).forEach { block ->
             when (block) {
                 is ChatMarkdownBlock.Heading -> MarkdownLine(
                     block.text,
-                    modifier = Modifier.padding(top = 10.dp, bottom = 2.dp),
+                    modifier = Modifier.padding(top = if (block.level <= 2) 8.dp else 6.dp, bottom = 1.dp),
                     fontWeight = FontWeight.Bold,
                     style = when (block.level) {
                         1 -> MaterialTheme.typography.headlineSmall
                         2 -> MaterialTheme.typography.titleLarge
-                        3 -> MaterialTheme.typography.titleMedium.copy(fontSize = 19.sp, lineHeight = 26.sp)
+                        3 -> MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp, lineHeight = 24.sp)
                         4 -> MaterialTheme.typography.titleMedium
                         else -> MaterialTheme.typography.titleSmall
                     },
                 )
-                is ChatMarkdownBlock.Unordered -> MarkdownListRow("◦", block.text, block.indent, subtleMarker = true)
-                is ChatMarkdownBlock.Ordered -> MarkdownListRow(block.marker, block.text, block.indent, subtleMarker = false)
+                is ChatMarkdownBlock.Unordered ->
+                    MarkdownListRow("◦", block.text, block.indent, subtleMarker = true)
+                is ChatMarkdownBlock.Ordered ->
+                    MarkdownListRow(block.marker, block.text, block.indent, subtleMarker = false)
+                is ChatMarkdownBlock.Task ->
+                    MarkdownTaskRow(block)
                 is ChatMarkdownBlock.Quote -> MarkdownLine(
                     block.text,
                     modifier = Modifier
                         .fillMaxWidth()
+                        .clip(RoundedCornerShape(6.dp))
                         .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.055f))
                         .padding(horizontal = 10.dp, vertical = 7.dp),
                 )
-                is ChatMarkdownBlock.Code -> MarkdownLine(
-                    block.text,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
-                        .padding(9.dp),
-                    monospace = true,
+                is ChatMarkdownBlock.Code -> MarkdownCodeBlock(block)
+                is ChatMarkdownBlock.Table -> MarkdownTable(block)
+                ChatMarkdownBlock.Rule -> HorizontalDivider(
+                    modifier = Modifier.padding(vertical = 5.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant,
                 )
                 is ChatMarkdownBlock.Paragraph -> MarkdownLine(block.text)
             }
@@ -280,8 +475,9 @@ private fun MarkdownLine(
     text: String,
     modifier: Modifier = Modifier,
     fontWeight: FontWeight? = null,
-    style: androidx.compose.ui.text.TextStyle = MaterialTheme.typography.bodyLarge,
+    style: TextStyle = MaterialTheme.typography.bodyLarge,
     monospace: Boolean = false,
+    softWrap: Boolean = true,
 ) {
     val direction = chatTextDirection(text)
     Text(
@@ -296,8 +492,163 @@ private fun MarkdownLine(
             fontFamily = if (monospace) FontFamily.Monospace else style.fontFamily,
         ),
         fontWeight = fontWeight,
+        softWrap = softWrap,
+        overflow = if (softWrap) TextOverflow.Clip else TextOverflow.Visible,
         textAlign = if (direction == TextDirection.Rtl) TextAlign.Right else TextAlign.Left,
     )
+}
+
+/** Fenced code keeps its own line breaks and scrolls sideways instead of wrapping. */
+@Composable
+private fun MarkdownCodeBlock(block: ChatMarkdownBlock.Code) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.075f))
+            .padding(vertical = 8.dp),
+    ) {
+        if (block.language.isNotBlank()) {
+            Text(
+                block.language,
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = 0.dp),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        val scroll = rememberScrollState()
+        Box(modifier = Modifier.fillMaxWidth().horizontalScroll(scroll)) {
+            Text(
+                text = AnnotatedString(block.text),
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = 2.dp),
+                style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+                softWrap = false,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+        }
+    }
+}
+
+/**
+ * GFM table. Columns are weighted by their widest cell so rows stay aligned on a
+ * phone-width transcript without needing a horizontal scroller.
+ */
+@Composable
+private fun MarkdownTable(block: ChatMarkdownBlock.Table) {
+    val columns = block.header.size
+    if (columns == 0) return
+    val sample = block.rows + listOf(block.header)
+    val weights = List(columns) { column ->
+        val widest = sample.maxOfOrNull { it.getOrElse(column) { "" }.length } ?: 1
+        widest.coerceIn(3, 42).toFloat()
+    }
+    val outline = MaterialTheme.colorScheme.outlineVariant
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .border(1.dp, outline, RoundedCornerShape(8.dp)),
+    ) {
+        TableRow(
+            cells = block.header,
+            aligns = block.aligns,
+            weights = weights,
+            header = true,
+            divider = false,
+            outline = outline,
+        )
+        block.rows.forEachIndexed { rowIndex, row ->
+            TableRow(
+                cells = row,
+                aligns = block.aligns,
+                weights = weights,
+                header = false,
+                divider = rowIndex < block.rows.lastIndex,
+                outline = outline,
+            )
+        }
+    }
+}
+
+@Composable
+private fun TableRow(
+    cells: List<String>,
+    aligns: List<TextAlign>,
+    weights: List<Float>,
+    header: Boolean,
+    divider: Boolean,
+    outline: Color,
+) {
+    Column {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    if (header) MaterialTheme.colorScheme.surfaceContainerHighest
+                    else MaterialTheme.colorScheme.surface.copy(alpha = 0f),
+                ),
+        ) {
+            cells.forEachIndexed { column, cell ->
+                TableCell(
+                    cell = cell,
+                    align = aligns.getOrElse(column) { TextAlign.Left },
+                    weight = weights.getOrElse(column) { 1f },
+                    header = header,
+                )
+            }
+        }
+        if (divider) {
+            HorizontalDivider(color = outline)
+        }
+    }
+}
+
+@Composable
+private fun RowScope.TableCell(cell: String, align: TextAlign, weight: Float, header: Boolean) {
+    val style = if (header) {
+        MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold)
+    } else {
+        MaterialTheme.typography.bodySmall
+    }
+    Text(
+        text = chatMarkdownInline(
+            cell,
+            linkColor = MaterialTheme.colorScheme.primary,
+            codeBackground = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f),
+        ),
+        modifier = Modifier.weight(weight).padding(horizontal = 8.dp, vertical = 7.dp),
+        style = style.copy(textDirection = chatTextDirection(cell)),
+        textAlign = align,
+        color = if (header) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface,
+    )
+}
+
+@Composable
+private fun MarkdownTaskRow(block: ChatMarkdownBlock.Task) {
+    val direction = chatTextDirection(block.text)
+    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(
+                    start = if (direction == TextDirection.Rtl) 0.dp else (block.indent * 16).dp,
+                    end = if (direction == TextDirection.Rtl) (block.indent * 16).dp else 0.dp,
+                ),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Text(
+                if (block.checked) "☑" else "☐",
+                style = MaterialTheme.typography.bodyLarge,
+                color = if (block.checked) MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            MarkdownLine(
+                block.text,
+                modifier = Modifier.weight(1f),
+                fontWeight = if (block.checked) FontWeight.Normal else null,
+            )
+        }
+    }
 }
 
 @Composable
@@ -330,6 +681,7 @@ private fun MarkdownListRow(marker: String, text: String, indent: Int, subtleMar
 private fun MarkdownMarker(marker: String, subtle: Boolean) {
     Text(
         marker,
+        modifier = Modifier.width(14.dp),
         color = if (subtle) MaterialTheme.colorScheme.onSurfaceVariant else Color.Unspecified,
         style = if (subtle) MaterialTheme.typography.labelMedium else MaterialTheme.typography.bodyLarge,
         fontWeight = FontWeight.SemiBold,
