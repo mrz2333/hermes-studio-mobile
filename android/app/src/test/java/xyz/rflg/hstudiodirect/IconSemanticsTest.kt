@@ -61,12 +61,13 @@ class IconSemanticsTest {
     }
 
     @Test
-    fun launcherKeepsThePurpleCoreVisuallySeparated() {
+    fun launcherUsesTheHStudioBrandColours() {
         val foreground = File(drawableDir, "ic_launcher_foreground.xml").readText()
         val colors = File("src/main/res/values/colors.xml").readText()
 
         assertTrue("launcher needs the brand clearance ring", foreground.contains("M54,44 A10,10"))
         assertTrue("clearance must match the icon background", foreground.contains("@color/ic_launcher_background"))
-        assertTrue("launcher background must match the iOS master", colors.contains("#091125"))
+        assertTrue("launcher background must be HStudio ink black (#000)", colors.contains("#000000"))
+        assertTrue("launcher mark must use the HStudio brand green", foreground.contains("#4CA66A"))
     }
 }
