@@ -89,7 +89,7 @@ android {
 // be told they are inputs — otherwise a broken translation looks up to date.
 tasks.withType<Test>().configureEach {
     inputs.dir("src/main/res").withPathSensitivity(PathSensitivity.RELATIVE)
-    inputs.file("src/main/java/us/i3u/hermesstudio/Locales.kt")
+    inputs.file("src/main/java/xyz/rflg/hstudiodirect/Locales.kt")
     testLogging { events("failed") }
 }
 

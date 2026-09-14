@@ -16,7 +16,7 @@ cp app/src/main/res/values/strings.xml app/src/main/res/values-fr/strings.xml
 ```
 
 **2. Offer it in Settings** — one line in
-[`Locales.kt`](../app/src/main/java/us/i3u/hermesstudio/Locales.kt):
+[`Locales.kt`](../app/src/main/java/xyz/rflg/hstudiodirect/Locales.kt):
 
 ```kotlin
 val APP_LANGUAGES = listOf(

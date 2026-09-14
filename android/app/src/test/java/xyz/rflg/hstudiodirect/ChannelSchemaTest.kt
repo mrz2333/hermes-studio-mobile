@@ -50,7 +50,7 @@ class ChannelSchemaTest {
             "CronJobs.kt",
             "KanbanScreens.kt",
         ).associateWith { name ->
-            File("src/main/java/us/i3u/hermesstudio/$name").readText()
+            File("src/main/java/xyz/rflg/hstudiodirect/$name").readText()
         }
         val nestedScreens = listOf(
             "RoomScreen" to "MainActivity.kt",
