@@ -21,7 +21,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LargeTopAppBar
+import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -37,8 +37,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 
-internal val StudioHorizontalPadding = 16.dp
-internal val StudioCardRadius = 24.dp
+internal val StudioHorizontalPadding = 14.dp
+internal val StudioCardRadius = 12.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -47,11 +47,11 @@ internal fun StudioLargeTopBar(
     navigationIcon: @Composable () -> Unit = {},
     actions: @Composable RowScope.() -> Unit = {},
 ) {
-    LargeTopAppBar(
+    TopAppBar(
         title = {
             Text(
                 title,
-                style = MaterialTheme.typography.displaySmall,
+                style = MaterialTheme.typography.titleLarge,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -83,7 +83,7 @@ internal fun StudioGroupedCard(
 internal fun StudioSectionTitle(text: String, modifier: Modifier = Modifier) {
     Text(
         text = text,
-        modifier = modifier.padding(start = 6.dp, end = 6.dp, top = 18.dp, bottom = 8.dp),
+        modifier = modifier.padding(start = 2.dp, end = 2.dp, top = 14.dp, bottom = 6.dp),
         style = MaterialTheme.typography.labelMedium,
         fontWeight = FontWeight.SemiBold,
         color = MaterialTheme.colorScheme.onSurfaceVariant,

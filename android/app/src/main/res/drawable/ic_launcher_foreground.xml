@@ -9,7 +9,7 @@
     <path
         android:fillColor="@android:color/transparent"
         android:pathData="M54,24 L54,47"
-        android:strokeColor="#FEFEFF"
+        android:strokeColor="#4CA66A"
         android:strokeLineCap="round"
         android:strokeLineJoin="round"
         android:strokeWidth="9" />
@@ -18,14 +18,14 @@
     <path
         android:fillColor="@android:color/transparent"
         android:pathData="M38,38 L38,52 L25,63"
-        android:strokeColor="#FEFEFF"
+        android:strokeColor="#4CA66A"
         android:strokeLineCap="round"
         android:strokeLineJoin="round"
         android:strokeWidth="9" />
     <path
         android:fillColor="@android:color/transparent"
         android:pathData="M70,38 L70,52 L83,63"
-        android:strokeColor="#FEFEFF"
+        android:strokeColor="#4CA66A"
         android:strokeLineCap="round"
         android:strokeLineJoin="round"
         android:strokeWidth="9" />
@@ -34,7 +34,7 @@
     <path
         android:fillColor="@android:color/transparent"
         android:pathData="M31,76 L50,64 L58,64 L77,76"
-        android:strokeColor="#FEFEFF"
+        android:strokeColor="#4CA66A"
         android:strokeLineCap="round"
         android:strokeLineJoin="round"
         android:strokeWidth="9" />
@@ -49,6 +49,6 @@
 
     <!-- Central intelligence. -->
     <path
-        android:fillColor="#6547F5"
+        android:fillColor="#4CA66A"
         android:pathData="M54,48 A6,6 0,1 1,54,60 A6,6 0,1 1,54,48" />
 </vector>

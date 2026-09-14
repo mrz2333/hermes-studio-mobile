@@ -58,7 +58,7 @@ class Store(context: Context) {
 
     /** system, light, or dark. Kept separately from Studio's display settings. */
     var appearance: String
-        get() = prefs.getString(KEY_APPEARANCE, "system").orEmpty().ifBlank { "system" }
+        get() = prefs.getString(KEY_APPEARANCE, "dark").orEmpty().ifBlank { "dark" }
         set(value) = prefs.edit().putString(KEY_APPEARANCE, value).apply()
 
     var reasoningEffort: String

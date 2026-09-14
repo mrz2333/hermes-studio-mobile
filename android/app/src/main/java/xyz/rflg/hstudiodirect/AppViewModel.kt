@@ -122,7 +122,7 @@ data class UiState(
     /** BCP-47 tag chosen in Settings; blank follows the system. */
     val language: String = "",
     /** system, light, or dark. */
-    val appearance: String = "system",
+    val appearance: String = "dark",
     val sessionModel: String? = null,
     val sessionProvider: String? = null,
     val contextTokens: Long = 0,
