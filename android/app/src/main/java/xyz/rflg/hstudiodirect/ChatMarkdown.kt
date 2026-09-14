@@ -114,7 +114,7 @@ private fun tableAligns(delimiter: String): List<TextAlign> = splitTableRow(deli
     val trailing = cell.endsWith(":")
     when {
         leading && trailing -> TextAlign.Center
-        right -> TextAlign.Right
+        trailing -> TextAlign.Right
         else -> TextAlign.Left
     }
 }
