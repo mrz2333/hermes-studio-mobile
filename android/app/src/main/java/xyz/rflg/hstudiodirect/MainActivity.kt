@@ -1575,6 +1575,7 @@ private fun MessageBubble(
                 shape = RoundedCornerShape(10.dp),
                 colors = CardDefaults.cardColors(containerColor = bubbleColor, contentColor = onBubble),
                 elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                border = if (!isUser && !line.isError) BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant) else null,
             ) {
                 Column(
                     modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
