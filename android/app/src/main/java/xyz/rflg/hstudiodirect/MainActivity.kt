@@ -1315,14 +1315,26 @@ private fun ConversationScreen(state: UiState, viewModel: AppViewModel) {
                 modifier = Modifier.weight(1f).fillMaxWidth().pullRefresh(pullRefreshState),
             ) {
                 if (state.lines.isEmpty() && !state.loadingHistory) {
-                    Text(
-                        stringResource(
-                            R.string.conversation_empty,
-                            profile.ifBlank { stringResource(R.string.conversation_your_agent) },
-                        ),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.align(Alignment.Center),
-                    )
+                    Column(
+                        modifier = Modifier.align(Alignment.Center).padding(32.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        Text(
+                            "💬",
+                            style = MaterialTheme.typography.displaySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Spacer(Modifier.height(10.dp))
+                        Text(
+                            stringResource(
+                                R.string.conversation_empty,
+                                profile.ifBlank { stringResource(R.string.conversation_your_agent) },
+                            ),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                        )
+                    }
                 } else {
                 LazyColumn(
                     state = listState,
@@ -1511,8 +1523,13 @@ private fun MessageBubble(
     val wide = !line.fromUser || hasThinking || parsed.files.isNotEmpty()
     val container = when {
         line.isError -> MaterialTheme.colorScheme.errorContainer
-        line.fromUser -> MaterialTheme.colorScheme.primaryContainer
-        else -> MaterialTheme.colorScheme.surfaceVariant
+        line.fromUser -> MaterialTheme.colorScheme.primary
+        else -> MaterialTheme.colorScheme.surfaceContainerLow
+    }
+    val onContainer = when {
+        line.isError -> MaterialTheme.colorScheme.onErrorContainer
+        line.fromUser -> MaterialTheme.colorScheme.onPrimary
+        else -> MaterialTheme.colorScheme.onSurface
     }
     Box(modifier = Modifier.fillMaxWidth(), contentAlignment = alignment) {
         Row(
@@ -1535,19 +1552,25 @@ private fun MessageBubble(
                         onClick = { onActions?.invoke() },
                         onLongClick = { onActions?.invoke() },
                     ),
-                    colors = CardDefaults.cardColors(containerColor = container),
+                    shape = RoundedCornerShape(
+                        topStart = 14.dp, topEnd = 14.dp,
+                        bottomEnd = if (line.fromUser) 4.dp else 14.dp,
+                        bottomStart = if (line.fromUser) 14.dp else 4.dp,
+                    ),
+                    colors = CardDefaults.cardColors(containerColor = container, contentColor = onContainer),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
                 ) {
                     Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         line.sender?.let {
                             Text(
                                 it,
                                 style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = onContainer.copy(alpha = 0.7f),
                             )
                         }
                         if (hasThinking) ThinkingTimeline(line)
                         if (parsed.text.isNotBlank()) {
-                            if (line.fromUser) Text(text = parsed.text) else ChatMarkdownText(text = parsed.text)
+                            if (line.fromUser) Text(text = parsed.text, color = onContainer) else ChatMarkdownText(text = parsed.text)
                         }
                         parsed.files.forEach { file ->
                             ChatFileCard(file = file, onDownload = { onDownload?.invoke(file) })
@@ -4268,15 +4291,17 @@ internal fun StudioTabs(state: UiState, viewModel: AppViewModel) {
     val colors = NavigationBarItemDefaults.colors(
         selectedIconColor = MaterialTheme.colorScheme.primary,
         selectedTextColor = MaterialTheme.colorScheme.primary,
-        indicatorColor = MaterialTheme.colorScheme.primaryContainer,
+        indicatorColor = Color.Transparent,
         unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
         unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
     )
 
-    NavigationBar(
-        containerColor = MaterialTheme.colorScheme.surfaceContainer,
-        tonalElevation = 0.dp,
-    ) {
+    Column {
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+        NavigationBar(
+            containerColor = MaterialTheme.colorScheme.surface,
+            tonalElevation = 0.dp,
+        ) {
         NavigationBarItem(
             selected = state.tab == Tab.Chats,
             onClick = { viewModel.showTab(Tab.Chats) },
@@ -4298,6 +4323,7 @@ internal fun StudioTabs(state: UiState, viewModel: AppViewModel) {
             label = { Text(stringResource(R.string.agent_hub_tab)) },
             colors = colors,
         )
+    }
     }
 }
 
