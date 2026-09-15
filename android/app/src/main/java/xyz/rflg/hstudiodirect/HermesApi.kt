@@ -1604,7 +1604,7 @@ class HermesApi(
 
     /** POST /upload — stores the file under the profile upload dir and returns its path. */
     fun upload(profile: String, bytes: ByteArray, filename: String, mime: String): Upload {
-        val result = multipart("/upload?profile=${enc(profile)}", "files", bytes, filename, mime)
+        val result = multipart("/api/studio/uploads?profile=${enc(profile)}", "files", bytes, filename, mime)
         val files = result.optJSONArray("files") ?: JSONArray()
         val first = files.optJSONObject(0) ?: throw HermesException("Upload returned no file")
         return Upload(

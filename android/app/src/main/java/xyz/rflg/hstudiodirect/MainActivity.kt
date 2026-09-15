@@ -1340,8 +1340,8 @@ private fun ConversationScreen(state: UiState, viewModel: AppViewModel) {
                 LazyColumn(
                     state = listState,
                         modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 20.dp),
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
                 ) {
                     items(state.lines) { line ->
                         MessageBubble(
@@ -1353,6 +1353,7 @@ private fun ConversationScreen(state: UiState, viewModel: AppViewModel) {
                                 viewModel.downloadChatFile(file, profile.ifBlank { "default" })
                             },
                         )
+                        Spacer(Modifier.height(6.dp))
                     }
                 }
                 }
@@ -1517,130 +1518,90 @@ private fun MessageBubble(
     val parsed = remember(line.text, onDownload != null) {
         if (onDownload == null) ParsedChatMessage(line.text, emptyList()) else parseChatMessage(line.text)
     }
-    val alignment = if (line.fromUser) Alignment.CenterEnd else Alignment.CenterStart
-    val hasThinking = !line.fromUser && (
+    // HStudio msg-content: user → align-items:flex-end (right), assistant → left
+    val isUser = line.fromUser
+    val hasThinking = !isUser && (
         line.streaming || line.reasoning?.isNotBlank() == true || line.tools.isNotEmpty()
     )
-    val wide = !line.fromUser || hasThinking || parsed.files.isNotEmpty()
-    val container = when {
+    val hasWideContent = hasThinking || parsed.files.isNotEmpty()
+
+    // HStudio message-bubble: padding:10px 14px, border-radius:10px
+    // background: --ink-bg-message (#f1f1f1 light / #1f1f1f dark)
+    // user messages use --ink-accent (#333 light / #4ca66a dark = primary)
+    val bubbleColor = when {
         line.isError -> MaterialTheme.colorScheme.errorContainer
-        line.fromUser -> MaterialTheme.colorScheme.primary
-        else -> MaterialTheme.colorScheme.surfaceContainerLow
+        isUser -> MaterialTheme.colorScheme.primary
+        else -> MaterialTheme.colorScheme.surfaceContainerHigh
     }
-    val onContainer = when {
+    val onBubble = when {
         line.isError -> MaterialTheme.colorScheme.onErrorContainer
-        line.fromUser -> MaterialTheme.colorScheme.onPrimary
+        isUser -> MaterialTheme.colorScheme.onPrimary
         else -> MaterialTheme.colorScheme.onSurface
     }
-    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = alignment) {
-        Row(
-            modifier = if (wide) Modifier.fillMaxWidth() else Modifier,
-            verticalAlignment = if (wide) Alignment.Top else Alignment.Bottom,
+
+    // HStudio msg-body: width:fit-content, max-width:88%
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start,
+    ) {
+        // HStudio: AI messages show msg-avatar (22dp circle) before the bubble
+        if (!isUser && !profile.isNullOrBlank()) {
+            ProfileAvatar(profile, avatar, size = 22.dp)
+            Spacer(Modifier.width(6.dp))
+        }
+
+        // HStudio msg-body: fit-content, max-width:88% (user) / 80% (AI)
+        Column(
+            modifier = Modifier.fillMaxWidth(if (isUser) 0.88f else if (hasWideContent) 1f else 0.80f),
+            horizontalAlignment = if (isUser) Alignment.End else Alignment.Start,
         ) {
-            // The agent's picture rides with its own replies, the way Studio
-            // shows it in the transcript.
-            if (!line.fromUser && !profile.isNullOrBlank()) {
-                ProfileAvatar(profile, avatar, size = 26.dp)
-                Spacer(Modifier.width(8.dp))
+            // HStudio message-author: display:flex, margin:0 0 4px 2px, gap:4px
+            line.sender?.takeIf { !isUser }?.let {
+                Text(
+                    it,
+                    modifier = Modifier.padding(start = 2.dp, bottom = 4.dp),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
-            Column(
-                modifier = if (wide) Modifier.weight(1f) else Modifier,
-                horizontalAlignment = if (line.fromUser) Alignment.End else Alignment.Start,
+
+            // HStudio message-bubble: padding:10px 14px, border-radius:10px
+            Card(
+                modifier = Modifier.combinedClickable(
+                    enabled = onActions != null,
+                    onClick = { onActions?.invoke() },
+                    onLongClick = { onActions?.invoke() },
+                ),
+                shape = RoundedCornerShape(10.dp),
+                colors = CardDefaults.cardColors(containerColor = bubbleColor, contentColor = onBubble),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
             ) {
-                Card(
-                    modifier = Modifier.combinedClickable(
-                        enabled = onActions != null,
-                        onClick = { onActions?.invoke() },
-                        onLongClick = { onActions?.invoke() },
-                    ),
-                    shape = RoundedCornerShape(
-                        topStart = 14.dp, topEnd = 14.dp,
-                        bottomEnd = if (line.fromUser) 4.dp else 14.dp,
-                        bottomStart = if (line.fromUser) 14.dp else 4.dp,
-                    ),
-                    colors = CardDefaults.cardColors(containerColor = container, contentColor = onContainer),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                Column(
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
-                    Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        line.sender?.let {
-                            Text(
-                                it,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = onContainer.copy(alpha = 0.7f),
-                            )
-                        }
-                        if (hasThinking) ThinkingTimeline(line)
-                        if (parsed.text.isNotBlank()) {
-                            if (line.fromUser) Text(text = parsed.text, color = onContainer) else ChatMarkdownText(text = parsed.text)
-                        }
-                        parsed.files.forEach { file ->
-                            ChatFileCard(file = file, onDownload = { onDownload?.invoke(file) })
+                    if (hasThinking) ThinkingTimeline(line)
+                    if (parsed.text.isNotBlank()) {
+                        if (isUser) {
+                            Text(text = parsed.text, color = onBubble)
+                        } else {
+                            ChatMarkdownText(text = parsed.text)
                         }
                     }
-                }
-                // HStudio's `message-meta`: the stamp sits under the bubble, not inside it.
-                val stamp = formatStamp(line.timestamp)
-                if (stamp.isNotBlank()) {
-                    Text(
-                        stamp,
-                        modifier = Modifier.padding(top = 4.dp, start = 6.dp, end = 6.dp),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                    parsed.files.forEach { file ->
+                        ChatFileCard(file = file, onDownload = { onDownload?.invoke(file) })
+                    }
                 }
             }
-        }
-    }
-}
 
-private fun quoteForReply(quoted: String, reply: String): String {
-    val excerpt = quoted.trim().lineSequence().take(8).joinToString("\n") { "> $it" }
-    return listOf(excerpt, reply.trim()).filter { it.isNotBlank() }.joinToString("\n\n")
-}
-
-@Composable
-private fun ChatFileCard(file: ChatFileLink, onDownload: () -> Unit) {
-    Surface(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onDownload),
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
-        shape = RoundedCornerShape(10.dp),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 9.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(9.dp),
-        ) {
-            Icon(
-                Icons.AutoMirrored.Filled.InsertDriveFile,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-            )
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            // HStudio message-meta: margin-top:4px, padding:0 4px, color:var(--ink-text-muted)
+            val stamp = formatStamp(line.timestamp)
+            if (stamp.isNotBlank()) {
                 Text(
-                    file.label,
-                    style = MaterialTheme.typography.bodyMedium,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                if (file.fileName != file.label) {
-                    Text(
-                        file.fileName,
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            fontFamily = FontFamily.Monospace,
-                            textDirection = TextDirection.Ltr,
-                        ),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-            }
-            IconButton(onClick = onDownload) {
-                Icon(
-                    Icons.Filled.Download,
-                    contentDescription = stringResource(R.string.download_action),
-                    tint = MaterialTheme.colorScheme.primary,
+                    stamp,
+                    modifier = Modifier.padding(top = 4.dp, start = 4.dp, end = 4.dp),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
@@ -2123,10 +2084,10 @@ private fun Composer(
 
     if (!composerExpanded && draft.isBlank() && state.attachments.isEmpty() && !state.recording && !state.transcribing) {
         Surface(
-            modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 12.dp, vertical = 8.dp),
-            shape = RoundedCornerShape(14.dp),
-            color = MaterialTheme.colorScheme.surfaceContainerLow,
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+            modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 12.dp, vertical = 6.dp),
+            shape = RoundedCornerShape(10.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
             tonalElevation = 0.dp,
             shadowElevation = 0.dp,
         ) {
@@ -2358,20 +2319,21 @@ private fun ComposerActionButton(
 ) {
     val hasPayload = draft.isNotBlank() || state.attachments.isNotEmpty()
     val active = hasPayload || state.recording || state.sending
+    // HStudio composer-send-button: 30px 圆形, 未激活=灰底, 激活=accent 底
     val background = if (active) {
         MaterialTheme.colorScheme.primary
     } else {
-        MaterialTheme.colorScheme.surfaceVariant
+        MaterialTheme.colorScheme.surfaceContainerHighest
     }
     val tint = if (active) {
         MaterialTheme.colorScheme.onPrimary
     } else {
-        MaterialTheme.colorScheme.onSurface
+        MaterialTheme.colorScheme.onSurfaceVariant
     }
 
     Box(
         modifier = Modifier
-            .size(40.dp)
+            .size(30.dp)
             .clip(CircleShape)
             .background(background),
         contentAlignment = Alignment.Center,
