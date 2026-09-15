@@ -1753,6 +1753,7 @@ private fun ToolStepRow(tool: ChatToolStep, nowMillis: Long) {
                 tint = when (tool.status) {
                     ToolRunStatus.Done -> MaterialTheme.colorScheme.primary
                     ToolRunStatus.Running -> MaterialTheme.colorScheme.tertiary
+                    ToolRunStatus.Error -> MaterialTheme.colorScheme.error
                 },
             )
             Column(modifier = Modifier.weight(1f)) {
