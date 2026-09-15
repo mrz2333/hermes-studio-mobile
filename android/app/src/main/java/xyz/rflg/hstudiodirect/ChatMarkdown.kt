@@ -501,17 +501,19 @@ private fun MarkdownLine(
 /** Fenced code keeps its own line breaks and scrolls sideways instead of wrapping. */
 @Composable
 private fun MarkdownCodeBlock(block: ChatMarkdownBlock.Code) {
+    val dark = isSystemInDarkTheme()
+    val codeBg = inkCodeBg(dark)
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
-            .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.075f))
-            .padding(vertical = 8.dp),
+            .background(codeBg)
+            .padding(horizontal = 12.dp, vertical = 10.dp),
     ) {
         if (block.language.isNotBlank()) {
             Text(
                 block.language,
-                modifier = Modifier.padding(horizontal = 10.dp, vertical = 0.dp),
+                modifier = Modifier.padding(bottom = 6.dp),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -519,11 +521,97 @@ private fun MarkdownCodeBlock(block: ChatMarkdownBlock.Code) {
         val scroll = rememberScrollState()
         Box(modifier = Modifier.fillMaxWidth().horizontalScroll(scroll)) {
             Text(
-                text = AnnotatedString(block.text),
-                modifier = Modifier.padding(horizontal = 10.dp, vertical = 2.dp),
+                text = highlightCode(block.text, dark),
                 style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
                 softWrap = false,
-                color = MaterialTheme.colorScheme.onSurface,
+            )
+        }
+    }
+}
+
+/**
+ * Apply HStudio hljs color palette as Compose AnnotatedString spans.
+ *
+ * Colors from HStudio app.css — light:
+ *   keyword #7c3aed  string #0f766e  number #b45309
+ *   function/class #2563eb  type #b91c1c  comment #6b7280
+ * Dark mappings are the corresponding bright variants.
+ */
+private fun highlightCode(code: String, dark: Boolean): AnnotatedString {
+    // Token regexes — order matters (comment before string, keyword before symbol)
+    data class Span(val start: Int, val end: Int, val color: Color)
+    val spans = mutableListOf<Span>()
+
+    // --- strings (single + double quoted, backtick, triple-quoted) ---
+    val stringColor = if (dark) Color(0xFF5EEAD4) else Color(0xFF0F766E)
+    val stringRe = Regex("\"\"\"[\\s\\S]*?\"\"\"" + "|" + "\"\"[^\"]*\"\"" + "|" + "\"(?:[^\"\\\\]|\\\\.)*\"" + "|" + "'(?:[^'\\\\]|\\\\.)*'" + "|" + "`[^`]*`")
+    stringRe.findAll(code).forEach { m ->
+        spans += Span(m.range.first, m.range.last + 1, stringColor)
+    }
+
+    // --- comments (single-line // ... and multi-line /* ... */) ---
+    val commentColor = if (dark) Color(0xFF94A3B8) else Color(0xFF6B7280)
+    Regex("//[^\n]*|/\\*[\\s\\S]*?\\*/").findAll(code).forEach { m ->
+        spans += Span(m.range.first, m.range.last + 1, commentColor)
+    }
+
+    // --- keywords ---
+    val keywordColor = if (dark) Color(0xFFC084FC) else Color(0xFF7C3AED)
+    val keywords = setOf("fun", "val", "var", "class", "object", "interface", "enum", "data",
+        "if", "else", "when", "for", "while", "do", "return", "break", "continue",
+        "true", "false", "null", "is", "as", "in", "import", "package",
+        "private", "internal", "protected", "public", "open", "abstract", "sealed",
+        "const", "lateinit", "suspend", "operator", "infix", "tailrec", "external",
+        "companion", "typealias", "init",
+        // Python / general
+        "def", "import", "from", "and", "or", "not", "None", "True", "False",
+        "try", "except", "finally", "raise", "with", "yield", "lambda", "pass",
+        "async", "await", "assert", "del", "global", "nonlocal",
+        // JS/TS
+        "function", "let", "const", "await", "async",
+        // Shell
+        "if", "then", "else", "elif", "fi", "case", "esac", "done",
+        // common
+        "new", "this", "super", "extends", "implements", "throw", "throws", "static",
+    )
+    val wordBoundary = Regex("\\b(${keywords.joinToString("|")})\\b")
+    wordBoundary.findAll(code).forEach { m ->
+        if (spans.none { it.start <= m.range.first && it.end >= m.range.last + 1 }) {
+            spans += Span(m.range.first, m.range.last + 1, keywordColor)
+        }
+    }
+
+    // --- numbers ---
+    val numberColor = if (dark) Color(0xFFFBBF24) else Color(0xFFB45309)
+    Regex("\\b\\d+\\.?\\d*(?:[eE][+-]?\\d+)?[fFLl]?\\b|\\b0[xX][a-fA-F0-9]+\\b").findAll(code).forEach { m ->
+        if (spans.none { it.start <= m.range.first && it.end >= m.range.last + 1 }) {
+            spans += Span(m.range.first, m.range.last + 1, numberColor)
+        }
+    }
+
+    // --- symbols / function-call-ish ---
+    val symbolColor = if (dark) Color(0xFF93C5FD) else Color(0xFF2563EB)
+    Regex("\\b[a-zA-Z_]\\w*(?=\\()").findAll(code).forEach { m ->
+        if (spans.none { it.start <= m.range.first && it.end >= m.range.last + 1 }) {
+            spans += Span(m.range.first, m.range.last + 1, symbolColor)
+        }
+    }
+
+    // --- types (words starting with uppercase) ---
+    val typeColor = if (dark) Color(0xFFFCA5A5) else Color(0xFFB91C1C)
+    Regex("\\b[A-Z][a-zA-Z0-9_]*\\b").findAll(code).forEach { m ->
+        if (spans.none { it.start <= m.range.first && it.end >= m.range.last + 1 }) {
+            spans += Span(m.range.first, m.range.last + 1, typeColor)
+        }
+    }
+
+    return buildAnnotatedString {
+        append(code)
+        spans.sortedBy { it.start }.forEach { span ->
+            addStyle(
+                SpanStyle(color = span.color),
+                span.start.coerceIn(0, code.length),
+                span.end.coerceIn(0, code.length),
             )
         }
     }

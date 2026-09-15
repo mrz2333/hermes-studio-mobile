@@ -805,12 +805,18 @@ private fun SessionRow(
     onClick: () -> Unit,
     onLongClick: () -> Unit,
 ) {
-    val running = session.running
+    val dark = isSystemInDarkTheme()
+    val cardHoverBg = inkCardHover(dark)
+    val inputBorder = inkInputBorder(dark)
+    val selectedBg = inkSelectedBg(dark)
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .combinedClickable(onClick = onClick, onLongClick = onLongClick)
-            .padding(horizontal = 13.dp, vertical = 11.dp),
+            .padding(horizontal = 14.dp, vertical = 10.dp)
+            .background(if (session.selected) selectedBg else Color.Transparent),
+        verticalArrangement = Arrangement.spacedBy(11.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             ProfileAvatar(
@@ -821,10 +827,16 @@ private fun SessionRow(
             Spacer(Modifier.width(12.dp))
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(3.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(text = session.title, modifier = Modifier.weight(1f), maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        text = session.title,
+                        modifier = Modifier.weight(1f),
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        style = MaterialTheme.typography.titleMedium.copy(fontSize = 14.sp, fontWeight = FontWeight.SemiBold),
+                    )
                     Spacer(Modifier.width(8.dp))
                     if (running) {
                         Text("●", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelSmall)
@@ -838,7 +850,7 @@ private fun SessionRow(
                 }
                 Text(
                     text = listOfNotNull(session.agentId ?: session.source.takeIf { it != "cli" }, session.profile, session.model).joinToString(" · "),
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -846,7 +858,7 @@ private fun SessionRow(
                 if (running && !session.activity.isNullOrBlank()) {
                     Text(
                         session.activity,
-                        style = MaterialTheme.typography.labelSmall,
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp),
                         color = MaterialTheme.colorScheme.primary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -864,6 +876,7 @@ private fun SessionRow(
             SessionRunningBar()
         }
     }
+}
 }
 
 /** HStudio session-running-light: 2px rainbow gradient bar flowing left→right. */
@@ -1588,12 +1601,14 @@ private fun MessageBubble(
     val hasWideContent = hasThinking || parsed.files.isNotEmpty()
 
     // HStudio message-bubble: padding:10px 14px, border-radius:10px
-    // background: --ink-bg-message (#f1f1f1 light / #1f1f1f dark)
-    // user messages use --ink-accent (#333 light / #4ca66a dark = primary)
+    // background: --ink-bg-message (#262828 dark / #f1f1f1 light)
+    // user messages keep the app's brand green (HStudio uses --ink-accent but our
+    // users are used to the green identity)
+    val dark = isSystemInDarkTheme()
     val bubbleColor = when {
         line.isError -> MaterialTheme.colorScheme.errorContainer
         isUser -> MaterialTheme.colorScheme.primary
-        else -> MaterialTheme.colorScheme.surfaceContainerHigh
+        else -> inkMessageBg(dark)
     }
     val onBubble = when {
         line.isError -> MaterialTheme.colorScheme.onErrorContainer
@@ -1637,7 +1652,7 @@ private fun MessageBubble(
                 shape = RoundedCornerShape(10.dp),
                 colors = CardDefaults.cardColors(containerColor = bubbleColor, contentColor = onBubble),
                 elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-                border = if (!isUser && !line.isError) BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant) else null,
+                border = null, // HStudio message-bubble has no border
             ) {
                 Column(
                     modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),

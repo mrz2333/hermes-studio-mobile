@@ -944,7 +944,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     model = selectedModel,
                     provider = selectedProvider,
                     runtime = _state.value.selectedRuntime,
-                    cachedPageId = resumePageIds[sessionId],
+                    cachedPageId = resumePageIds[sessionId]
+                            ?: store.getResumePageId(profile.ifBlank { "default" }, sessionId),
                 )
                     .collect { event ->
                         when (event) {
@@ -1018,7 +1019,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                                 state.copy(backgroundAgentRuns = tasks)
                             }
                             is RunEvent.ResumedState -> {
-                                event.pageId?.let { resumePageIds[sessionId] = it }
+                                event.pageId?.let { pageId ->
+                                    resumePageIds[sessionId] = pageId
+                                    store.setResumePageId(profile.ifBlank { "default" }, sessionId, pageId)
+                                }
                                 _state.update { state ->
                                     val restoredLines = event.messages?.mapNotNull { message ->
                                         when (message.role) {
