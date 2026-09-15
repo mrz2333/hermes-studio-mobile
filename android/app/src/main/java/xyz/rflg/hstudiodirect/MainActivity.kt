@@ -836,7 +836,8 @@ private fun SessionRow(
         Icon(
             Icons.AutoMirrored.Filled.KeyboardArrowRight,
             contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+            modifier = Modifier.size(18.dp),
         )
     }
 }
@@ -1601,8 +1602,9 @@ private fun quoteForReply(quoted: String, reply: String): String {
 private fun ChatFileCard(file: ChatFileLink, onDownload: () -> Unit) {
     Surface(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onDownload),
-        color = MaterialTheme.colorScheme.surface,
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
         shape = RoundedCornerShape(10.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 9.dp),
@@ -1748,7 +1750,10 @@ private fun ToolStepRow(tool: ChatToolStep, nowMillis: Long) {
                 Icons.Filled.Build,
                 contentDescription = null,
                 modifier = Modifier.size(16.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                tint = when (tool.status) {
+                    ToolRunStatus.Done -> MaterialTheme.colorScheme.primary
+                    ToolRunStatus.Running -> MaterialTheme.colorScheme.tertiary
+                },
             )
             Column(modifier = Modifier.weight(1f)) {
                 Text(

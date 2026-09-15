@@ -102,16 +102,16 @@ internal fun StudioCardDivider(startIndent: Int = 66) {
 internal fun StudioIconTile(icon: ImageVector, color: Color, modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
-            .size(44.dp),
+            .size(38.dp),
         contentAlignment = Alignment.Center,
     ) {
         Card(
-            modifier = Modifier.size(44.dp),
-            shape = RoundedCornerShape(13.dp),
+            modifier = Modifier.size(38.dp),
+            shape = RoundedCornerShape(10.dp),
             colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.16f)),
         ) {
             Box(modifier = Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
-                Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(23.dp))
+                Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(20.dp))
             }
         }
     }
@@ -124,12 +124,12 @@ internal fun StudioIconTile(icon: Painter, color: Color, modifier: Modifier = Mo
         contentAlignment = Alignment.Center,
     ) {
         Card(
-            modifier = Modifier.size(44.dp),
-            shape = RoundedCornerShape(13.dp),
+            modifier = Modifier.size(38.dp),
+            shape = RoundedCornerShape(10.dp),
             colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.16f)),
         ) {
             Box(modifier = Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
-                Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(23.dp))
+                Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(20.dp))
             }
         }
     }
@@ -148,11 +148,11 @@ internal fun StudioDestinationRow(
         modifier = Modifier
             .fillMaxWidth()
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
-            .padding(horizontal = 14.dp, vertical = 12.dp),
+            .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         StudioIconTile(icon, color)
-        Spacer(Modifier.width(12.dp))
+        Spacer(Modifier.width(10.dp))
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Text(title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
             subtitle?.takeIf { it.isNotBlank() }?.let {
@@ -187,11 +187,11 @@ internal fun StudioDestinationRow(
         modifier = Modifier
             .fillMaxWidth()
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
-            .padding(horizontal = 14.dp, vertical = 12.dp),
+            .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         StudioIconTile(icon, color)
-        Spacer(Modifier.width(12.dp))
+        Spacer(Modifier.width(10.dp))
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Text(title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
             subtitle?.takeIf { it.isNotBlank() }?.let {
