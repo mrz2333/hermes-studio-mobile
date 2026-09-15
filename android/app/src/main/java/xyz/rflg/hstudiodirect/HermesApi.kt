@@ -1997,6 +1997,10 @@ data class SessionSummary(
     val archived: Boolean = false,
     val categoryId: Int? = null,
     val workspace: String? = null,
+    /** True when this session has an agent run in progress (HStudio shows a rainbow bar). */
+    val running: Boolean = false,
+    /** Last activity hint shown as a live status line (HStudio's `live-reasoning-detail`). */
+    val activity: String? = null,
 )
 
 data class ModelOption(

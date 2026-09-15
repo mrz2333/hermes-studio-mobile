@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -799,45 +800,101 @@ private fun SessionRow(
     onClick: () -> Unit,
     onLongClick: () -> Unit,
 ) {
-    Row(
+    val running = session.running
+    Column(
         modifier = Modifier
             .fillMaxWidth()
             .combinedClickable(onClick = onClick, onLongClick = onLongClick)
             .padding(horizontal = 13.dp, vertical = 11.dp),
-        verticalAlignment = Alignment.CenterVertically,
     ) {
-        ProfileAvatar(
-            name = session.profile.orEmpty().ifBlank { "default" },
-            spec = avatar,
-            size = 42.dp,
-        )
-        Spacer(Modifier.width(12.dp))
-        Column(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(3.dp),
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(text = session.title, modifier = Modifier.weight(1f), maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                Spacer(Modifier.width(8.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            ProfileAvatar(
+                name = session.profile.orEmpty().ifBlank { "default" },
+                spec = avatar,
+                size = 42.dp,
+            )
+            Spacer(Modifier.width(12.dp))
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(3.dp),
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(text = session.title, modifier = Modifier.weight(1f), maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                    Spacer(Modifier.width(8.dp))
+                    if (running) {
+                        Text("●", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelSmall)
+                        Spacer(Modifier.width(4.dp))
+                    }
+                    Text(
+                        text = formatStamp(session.updatedAt),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
                 Text(
-                    text = formatStamp(session.updatedAt),
-                    style = MaterialTheme.typography.labelSmall,
+                    text = listOfNotNull(session.agentId ?: session.source.takeIf { it != "cli" }, session.profile, session.model).joinToString(" · "),
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
+                if (running && !session.activity.isNullOrBlank()) {
+                    Text(
+                        session.activity,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
-            Text(
-                text = listOfNotNull(session.agentId ?: session.source.takeIf { it != "cli" }, session.profile, session.model).joinToString(" · "),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
+            Icon(
+                Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                modifier = Modifier.size(18.dp),
             )
         }
-        Icon(
-            Icons.AutoMirrored.Filled.KeyboardArrowRight,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-            modifier = Modifier.size(18.dp),
+        if (running) {
+            SessionRunningBar()
+        }
+    }
+}
+
+/** HStudio session-running-light: 2px rainbow gradient bar flowing left→right. */
+@Composable
+private fun SessionRunningBar() {
+    val transition = rememberInfiniteTransition(label = "running")
+    val progress by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1800),
+            repeatMode = RepeatMode.Restart,
+        ),
+        label = "offset",
+    )
+    val rainbow = listOf(
+        Color.Transparent, Color(0xFFFF5F6D), Color(0xFFFFB86C),
+        Color(0xFFF9F871), Color(0xFF54E6A8), Color(0xFF58A6FF),
+        Color(0xFFBD75FF), Color.Transparent,
+    )
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 2.dp)
+            .height(2.dp)
+            .clip(RoundedCornerShape(999.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
+    ) {
+        val barWidth = 0.5f
+        Box(
+            modifier = Modifier
+                .fillMaxWidth(barWidth)
+                .height(2.dp)
+                .offset(x = (progress * 200 - 50).dp)
+                .clip(RoundedCornerShape(999.dp))
+                .background(Brush.linearGradient(rainbow)),
         )
     }
 }
