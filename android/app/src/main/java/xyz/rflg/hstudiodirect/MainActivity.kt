@@ -340,7 +340,10 @@ private fun LoginScreen(state: UiState, viewModel: AppViewModel) {
         topBar = {
             StudioTopBar(
                 title = stringResource(R.string.app_name),
-                actions = { LanguageAction(state, viewModel) },
+                actions = {
+                    LanguageAction(state, viewModel)
+                    ThemeToggle(state, viewModel)
+                },
             )
         },
     ) { padding ->
@@ -544,6 +547,7 @@ private fun ChatsScreen(state: UiState, viewModel: AppViewModel) {
                     IconButton(onClick = { viewModel.startNewConversation() }) {
                         Icon(Icons.Filled.Edit, contentDescription = stringResource(R.string.action_new_chat), tint = MaterialTheme.colorScheme.primary)
                     }
+                    ThemeToggle(state, viewModel)
                 },
             )
         },
@@ -612,13 +616,13 @@ private fun SessionRow(
         modifier = Modifier
             .fillMaxWidth()
             .combinedClickable(onClick = onClick, onLongClick = onLongClick)
-            .padding(horizontal = 14.dp, vertical = 13.dp),
+            .padding(horizontal = 13.dp, vertical = 11.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         ProfileAvatar(
             name = session.profile.orEmpty().ifBlank { "default" },
             spec = avatar,
-            size = 48.dp,
+            size = 42.dp,
         )
         Spacer(Modifier.width(12.dp))
         Column(
@@ -626,7 +630,7 @@ private fun SessionRow(
             verticalArrangement = Arrangement.spacedBy(3.dp),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(text = session.title, modifier = Modifier.weight(1f), maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleMedium)
+                Text(text = session.title, modifier = Modifier.weight(1f), maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                 Spacer(Modifier.width(8.dp))
                 Text(
                     text = formatStamp(session.updatedAt),
@@ -636,7 +640,7 @@ private fun SessionRow(
             }
             Text(
                 text = listOfNotNull(session.agentId ?: session.source.takeIf { it != "cli" }, session.profile, session.model).joinToString(" · "),
-                style = MaterialTheme.typography.labelSmall,
+                style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -2085,6 +2089,24 @@ private val REASONING_LEVELS = listOf(
     "high" to R.string.reasoning_high,
     "xhigh" to R.string.reasoning_extra_high,
 )
+
+/**
+ * One-tap day/night switch, HStudio's `navigation-action`: the app ships
+ * dark-first (HStudio's --UI-BG is #000), so the sun/moon has to be reachable
+ * from the top bar instead of only inside Settings -> Appearance.
+ */
+@Composable
+private fun ThemeToggle(state: UiState, viewModel: AppViewModel) {
+    val dark = state.appearance != "light"
+    IconButton(onClick = { viewModel.setAppearance(if (dark) "light" else "dark") }) {
+        Icon(
+            if (dark) Icons.Filled.LightMode else Icons.Filled.DarkMode,
+            contentDescription = stringResource(R.string.settings_appearance),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(20.dp),
+        )
+    }
+}
 
 private val APPEARANCE_LEVELS = listOf(
     "system" to R.string.appearance_system,
