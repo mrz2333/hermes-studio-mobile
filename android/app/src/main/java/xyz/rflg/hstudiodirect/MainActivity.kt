@@ -1264,20 +1264,17 @@ private fun ConversationScreen(state: UiState, viewModel: AppViewModel) {
 @Composable
 private fun ConversationTopBar(state: UiState, profile: String, avatar: AvatarSpec?, viewModel: AppViewModel) {
     var menuOpen by remember { mutableStateOf(false) }
-    TopAppBar(
-        title = {
-            Surface(
-                shape = RoundedCornerShape(22.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant,
-                tonalElevation = 2.dp,
-            ) {
+    Column {
+        TopAppBar(
+            title = {
+                // HStudio's `navigation-title` + `navigation-title-spinner`: a flat
+                // title with a live spinner while the run is still streaming.
                 Row(
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    ProfileAvatar(profile.ifBlank { "default" }, avatar, size = 27.dp)
-                    Column {
+                    ProfileAvatar(profile.ifBlank { "default" }, avatar, size = 26.dp)
+                    Column(modifier = Modifier.weight(1f, fill = false)) {
                         Text(state.openSession?.title ?: stringResource(R.string.action_new_chat), maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleSmall)
                         Text(
                             state.selectedRuntime.name,
@@ -1285,28 +1282,28 @@ private fun ConversationTopBar(state: UiState, profile: String, avatar: AvatarSp
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
+                    if (state.sending) {
+                        CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
+                    }
                 }
-            }
-        },
-        navigationIcon = {
-            Surface(modifier = Modifier.padding(start = 7.dp), shape = CircleShape, color = MaterialTheme.colorScheme.surfaceVariant) {
+            },
+            navigationIcon = {
                 IconButton(onClick = { viewModel.back() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.action_back)) }
-            }
-        },
-        actions = {
-            Box {
-                Surface(modifier = Modifier.padding(end = 7.dp), shape = CircleShape, color = MaterialTheme.colorScheme.surfaceVariant) {
+            },
+            actions = {
+                Box {
                     IconButton(onClick = { menuOpen = true }) { Icon(Icons.Filled.MoreVert, stringResource(R.string.message_actions)) }
+                    DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                        DropdownMenuItem(text = { Text(stringResource(R.string.action_refresh)) }, onClick = { menuOpen = false; viewModel.refreshConversation() })
+                        DropdownMenuItem(text = { Text(stringResource(R.string.action_new_chat)) }, onClick = { menuOpen = false; viewModel.startNewConversation() })
+                        DropdownMenuItem(text = { Text(stringResource(R.string.message_fork)) }, enabled = !state.sending, onClick = { menuOpen = false; viewModel.send("/fork") })
+                    }
                 }
-                DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                    DropdownMenuItem(text = { Text(stringResource(R.string.action_refresh)) }, onClick = { menuOpen = false; viewModel.refreshConversation() })
-                    DropdownMenuItem(text = { Text(stringResource(R.string.action_new_chat)) }, onClick = { menuOpen = false; viewModel.startNewConversation() })
-                    DropdownMenuItem(text = { Text(stringResource(R.string.message_fork)) }, enabled = !state.sending, onClick = { menuOpen = false; viewModel.send("/fork") })
-                }
-            }
-        },
-        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
-    )
+            },
+            colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface),
+        )
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+    }
 }
 
 @Composable
@@ -1341,37 +1338,44 @@ private fun MessageBubble(
                 ProfileAvatar(profile, avatar, size = 26.dp)
                 Spacer(Modifier.width(8.dp))
             }
-            Card(
-                modifier = (if (wide) Modifier.weight(1f) else Modifier).combinedClickable(
-                    enabled = onActions != null,
-                    onClick = { onActions?.invoke() },
-                    onLongClick = { onActions?.invoke() },
-                ),
-                colors = CardDefaults.cardColors(containerColor = container),
+            Column(
+                modifier = if (wide) Modifier.weight(1f) else Modifier,
+                horizontalAlignment = if (line.fromUser) Alignment.End else Alignment.Start,
             ) {
-                Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    line.sender?.let {
-                        Text(
-                            it,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+                Card(
+                    modifier = Modifier.combinedClickable(
+                        enabled = onActions != null,
+                        onClick = { onActions?.invoke() },
+                        onLongClick = { onActions?.invoke() },
+                    ),
+                    colors = CardDefaults.cardColors(containerColor = container),
+                ) {
+                    Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        line.sender?.let {
+                            Text(
+                                it,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        if (hasThinking) ThinkingTimeline(line)
+                        if (parsed.text.isNotBlank()) {
+                            if (line.fromUser) Text(text = parsed.text) else ChatMarkdownText(text = parsed.text)
+                        }
+                        parsed.files.forEach { file ->
+                            ChatFileCard(file = file, onDownload = { onDownload?.invoke(file) })
+                        }
                     }
-                    if (hasThinking) ThinkingTimeline(line)
-                    if (parsed.text.isNotBlank()) {
-                        if (line.fromUser) Text(text = parsed.text) else ChatMarkdownText(text = parsed.text)
-                    }
-                    parsed.files.forEach { file ->
-                        ChatFileCard(file = file, onDownload = { onDownload?.invoke(file) })
-                    }
-                    val stamp = formatStamp(line.timestamp)
-                    if (stamp.isNotBlank()) {
-                        Text(
-                            stamp,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
+                }
+                // HStudio's `message-meta`: the stamp sits under the bubble, not inside it.
+                val stamp = formatStamp(line.timestamp)
+                if (stamp.isNotBlank()) {
+                    Text(
+                        stamp,
+                        modifier = Modifier.padding(top = 4.dp, start = 6.dp, end = 6.dp),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             }
         }
@@ -1521,8 +1525,9 @@ private fun ToolStepRow(tool: ChatToolStep, nowMillis: Long) {
     }
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.surface,
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
         shape = RoundedCornerShape(9.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 9.dp, vertical = 7.dp),
