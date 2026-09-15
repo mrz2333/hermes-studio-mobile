@@ -42,6 +42,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.isImeVisible
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
@@ -804,6 +805,7 @@ private fun SessionRow(
     avatar: AvatarSpec?,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
+    isActive: Boolean = false,
 ) {
     val dark = isSystemInDarkTheme()
     val cardHoverBg = inkCardHover(dark)
@@ -815,7 +817,7 @@ private fun SessionRow(
             .fillMaxWidth()
             .combinedClickable(onClick = onClick, onLongClick = onLongClick)
             .padding(horizontal = 14.dp, vertical = 10.dp)
-            .background(if (session.selected) selectedBg else Color.Transparent),
+            .background(if (isActive) selectedBg else Color.Transparent),
         verticalArrangement = Arrangement.spacedBy(11.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -837,6 +839,7 @@ private fun SessionRow(
                         overflow = TextOverflow.Ellipsis,
                         style = MaterialTheme.typography.titleMedium.copy(fontSize = 14.sp, fontWeight = FontWeight.SemiBold),
                     )
+                    val running = session.running
                     Spacer(Modifier.width(8.dp))
                     if (running) {
                         Text("●", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelSmall)
