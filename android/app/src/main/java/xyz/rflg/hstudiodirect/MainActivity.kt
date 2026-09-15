@@ -1639,7 +1639,7 @@ private fun ChatFileCard(file: ChatFileLink, onDownload: () -> Unit) {
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
-                    file.size,
+                    file.fileName,
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
