@@ -811,6 +811,7 @@ private fun SessionRow(
     val cardHoverBg = inkCardHover(dark)
     val inputBorder = inkInputBorder(dark)
     val selectedBg = inkSelectedBg(dark)
+    val running = session.running
 
     Column(
         modifier = Modifier
@@ -839,7 +840,6 @@ private fun SessionRow(
                         overflow = TextOverflow.Ellipsis,
                         style = MaterialTheme.typography.titleMedium.copy(fontSize = 14.sp, fontWeight = FontWeight.SemiBold),
                     )
-                    val running = session.running
                     Spacer(Modifier.width(8.dp))
                     if (running) {
                         Text("●", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelSmall)
