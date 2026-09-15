@@ -803,4 +803,11 @@
     <string name="queued_run_insert">Run next</string>
     <string name="queued_run_cancel">Cancel queued message</string>
     <string name="background_agent_summary">%1$s · %2$s</string>
+    <string name="instances_title">Instances</string>
+    <string name="instances_add">Add instance</string>
+    <string name="instances_current">Current</string>
+    <string name="instances_empty">No saved instances yet</string>
+    <string name="instances_saved">Saved instances</string>
+    <string name="instances_label_hint">Name (home, office…)</string>
+    <string name="instances_delete_body">Remove this instance from this phone? The server is untouched.</string>
 </resources>

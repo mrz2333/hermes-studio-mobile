@@ -22,6 +22,7 @@ enum class Screen {
     Loading, Onboarding, Login, Chats, Groups, AgentHub, Conversation, Room, Profiles,
     Settings, MoreSettings, SettingsGroup, Channels, Channel, CronJobs, CronJob, CronHistory,
     Kanban, KanbanTask, Skills, Skill, Plugins, Mcp, Pets, Insights, AgentRuntimes, Workflows, GlobalAgent, EkkoHub, Files, Logs, Connections, Journey, Webhooks, RuntimeVersions, Appearance,
+    Instances,
 }
 
 /** Settings is a short list of these; each opens its own screen. */
@@ -123,6 +124,8 @@ data class UiState(
     val language: String = "",
     /** system, light, or dark. */
     val appearance: String = "dark",
+    /** Saved Studio deployments, newest first. The active one is [baseUrl]. */
+    val instances: List<StudioInstance> = emptyList(),
     val sessionModel: String? = null,
     val sessionProvider: String? = null,
     val contextTokens: Long = 0,
@@ -275,6 +278,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             reasoningEffort = store.reasoningEffort,
             language = store.language,
             appearance = store.appearance,
+            instances = store.instances,
         ),
     )
     val state: StateFlow<UiState> = _state.asStateFlow()
@@ -375,6 +379,16 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 val token = api.login(username.trim(), password)
                 store.baseUrl = normalized
                 store.token = token
+                store.instances = upsertInstance(
+                    store.instances,
+                    StudioInstance(
+                        url = normalized,
+                        label = hostLabel(normalized),
+                        username = username.trim(),
+                        token = token,
+                        lastUsedAt = System.currentTimeMillis(),
+                    ),
+                )
                 api.update(normalized, token)
                 chat.update(normalized, token)
                 group.update(normalized, token)
@@ -391,6 +405,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                         profiles = profiles,
                         activeProfile = pickProfile(profiles),
                         sessions = sessions,
+                        instances = store.instances,
                         error = null,
                     )
                 }
@@ -2750,6 +2765,61 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** Settings itself only needs the channel counts and the default model. */
+    /** Opens the saved-instance list (HStudio's device picker). */
+    fun openInstances() {
+        _state.update { it.copy(screen = Screen.Instances, error = null, notice = null) }
+    }
+
+    /** Points every client at another saved deployment and reloads its sessions. */
+    fun switchInstance(url: String) {
+        val target = store.instances.firstOrNull { it.url == url.trimEnd('/') } ?: return
+        if (target.url == store.baseUrl) {
+            _state.update { it.copy(screen = Screen.Chats) }
+            return
+        }
+        val touched = upsertInstance(store.instances, target.copy(lastUsedAt = System.currentTimeMillis()))
+        store.instances = touched
+        store.baseUrl = target.url
+        store.token = target.token
+        api.update(target.url, target.token)
+        chat.update(target.url, target.token)
+        group.update(target.url, target.token)
+        _state.update {
+            it.copy(
+                baseUrl = target.url,
+                instances = touched,
+                screen = Screen.Loading,
+                openSession = null,
+                lines = emptyList(),
+                sessions = emptyList(),
+                rooms = emptyList(),
+                account = target.username,
+                error = null,
+                notice = null,
+            )
+        }
+        restoreSession()
+    }
+
+    /** The login form doubles as "add another instance". */
+    fun addInstance() {
+        _state.update { it.copy(screen = Screen.Login, error = null) }
+    }
+
+    fun renameInstance(url: String, label: String) {
+        val updated = store.instances.map { item ->
+            if (item.url == url) item.copy(label = label.trim().ifBlank { item.host }) else item
+        }
+        store.instances = updated
+        _state.update { it.copy(instances = updated) }
+    }
+
+    fun removeInstance(url: String) {
+        val remaining = store.instances.filterNot { it.url == url }
+        store.instances = remaining
+        _state.update { it.copy(instances = remaining) }
+    }
+
     fun openSettings() {
         _state.update { it.copy(screen = Screen.Settings, error = null, notice = null, openGroup = null) }
         refreshServerConfig()
@@ -3061,6 +3131,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 Screen.Kanban, Screen.Skills, Screen.Plugins, Screen.Mcp, Screen.Pets, Screen.Insights, Screen.AgentRuntimes, Screen.Workflows, Screen.GlobalAgent, Screen.EkkoHub, Screen.Files, Screen.Logs, Screen.Connections, Screen.Journey, Screen.Webhooks, Screen.RuntimeVersions, Screen.Appearance -> Screen.AgentHub
                 Screen.Channels, Screen.SettingsGroup, Screen.CronJobs -> state.toolReturnScreen
                 Screen.Profiles -> state.profilesReturnScreen
+                Screen.Instances -> Screen.Chats
                 Screen.MoreSettings -> Screen.Settings
                 else -> when (state.tab) {
                     Tab.Groups -> Screen.Groups
@@ -3110,6 +3181,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 reasoningEffort = store.reasoningEffort,
                 language = store.language,
                 appearance = store.appearance,
+                instances = store.instances,
             )
         }
     }

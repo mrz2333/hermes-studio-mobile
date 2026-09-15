@@ -93,6 +93,7 @@ import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Edit
@@ -326,6 +327,7 @@ private fun AppContent(state: UiState, viewModel: AppViewModel) {
         Screen.Conversation -> ConversationScreen(state, viewModel)
         Screen.Room -> RoomScreen(state, viewModel)
         Screen.Profiles -> ProfilesScreen(state, viewModel)
+        Screen.Instances -> InstancesScreen(state, viewModel)
     }
 }
 
@@ -412,6 +414,27 @@ private fun LoginScreen(state: UiState, viewModel: AppViewModel) {
             state.error?.let {
                 Spacer(Modifier.height(10.dp))
                 ErrorNote(it) { viewModel.dismissError() }
+            }
+            if (state.instances.isNotEmpty()) {
+                Spacer(Modifier.height(16.dp))
+                Text(
+                    stringResource(R.string.instances_saved),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(6.dp))
+                StudioGroupedCard {
+                    state.instances.forEachIndexed { index, item ->
+                        InstanceRow(
+                            item = item,
+                            active = item.url.trimEnd('/') == state.baseUrl.trimEnd('/'),
+                            onSwitch = { viewModel.switchInstance(item.url) },
+                        )
+                        if (index < state.instances.lastIndex) {
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                        }
+                    }
+                }
             }
             Spacer(Modifier.height(12.dp))
             Text(
@@ -549,6 +572,9 @@ private fun ChatsScreen(state: UiState, viewModel: AppViewModel) {
                     IconButton(onClick = { viewModel.startNewConversation() }) {
                         Icon(Icons.Filled.Edit, contentDescription = stringResource(R.string.action_new_chat), tint = MaterialTheme.colorScheme.primary)
                     }
+                    IconButton(onClick = { viewModel.openInstances() }) {
+                        Icon(Icons.Filled.Dns, contentDescription = stringResource(R.string.instances_title), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                     ThemeToggle(state, viewModel)
                 },
             )
@@ -602,6 +628,165 @@ private fun ChatsScreen(state: UiState, viewModel: AppViewModel) {
                 backgroundColor = MaterialTheme.colorScheme.surface,
                 contentColor = MaterialTheme.colorScheme.primary,
             )
+        }
+    }
+}
+
+@Composable
+private fun InstancesScreen(state: UiState, viewModel: AppViewModel) {
+    var rename by remember { mutableStateOf<StudioInstance?>(null) }
+    var confirmRemove by remember { mutableStateOf<StudioInstance?>(null) }
+    val active = state.baseUrl.trimEnd('/')
+
+    rename?.let { target ->
+        TextPromptDialog(
+            title = stringResource(R.string.action_rename),
+            initial = target.label,
+            hint = stringResource(R.string.instances_label_hint),
+            action = stringResource(R.string.action_save),
+            onConfirm = { viewModel.renameInstance(target.url, it); rename = null },
+            onDismiss = { rename = null },
+        )
+    }
+    confirmRemove?.let { target ->
+        ConfirmDialog(
+            title = stringResource(R.string.action_delete),
+            body = stringResource(R.string.instances_delete_body),
+            action = stringResource(R.string.action_delete),
+            onConfirm = { viewModel.removeInstance(target.url); confirmRemove = null },
+            onDismiss = { confirmRemove = null },
+        )
+    }
+
+    Scaffold(
+        topBar = {
+            StudioTopBar(
+                title = stringResource(R.string.instances_title),
+                onBack = { viewModel.back() },
+                actions = {
+                    IconButton(onClick = { viewModel.addInstance() }) {
+                        Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.instances_add))
+                    }
+                },
+            )
+        },
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .verticalScroll(rememberScrollState())
+                .padding(StudioHorizontalPadding),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            if (state.instances.isEmpty()) {
+                EmptyNote(stringResource(R.string.instances_empty))
+            } else {
+                StudioGroupedCard {
+                    state.instances.forEachIndexed { index, item ->
+                        InstanceRow(
+                            item = item,
+                            active = item.url.trimEnd('/') == active,
+                            onSwitch = { viewModel.switchInstance(item.url) },
+                            onRename = { rename = item },
+                            onRemove = { confirmRemove = item },
+                        )
+                        if (index < state.instances.lastIndex) {
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** One saved Studio: label, host, account, and where it is the active one. */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun InstanceRow(
+    item: StudioInstance,
+    active: Boolean,
+    onSwitch: () -> Unit,
+    onRename: (() -> Unit)? = null,
+    onRemove: (() -> Unit)? = null,
+) {
+    var menu by remember { mutableStateOf(false) }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .combinedClickable(onClick = onSwitch, onLongClick = onRename ?: onSwitch)
+            .padding(horizontal = 13.dp, vertical = 11.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(36.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(
+                    if (active) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.surfaceContainerHighest,
+                ),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                item.label.take(1).uppercase(),
+                color = if (active) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+            )
+        }
+        Spacer(Modifier.width(11.dp))
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    item.label,
+                    modifier = Modifier.weight(1f, fill = false),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                if (active) {
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        stringResource(R.string.instances_current),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+            }
+            Text(
+                item.host,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            if (item.username.isNotBlank()) {
+                Text(
+                    item.username,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+        if (onRename != null || onRemove != null) {
+            Box {
+                IconButton(onClick = { menu = true }) {
+                    Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.message_actions))
+                }
+                DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                    onRename?.let { action ->
+                        DropdownMenuItem(text = { Text(stringResource(R.string.action_rename)) }, onClick = { menu = false; action() })
+                    }
+                    onRemove?.let { action ->
+                        DropdownMenuItem(text = { Text(stringResource(R.string.action_delete)) }, onClick = { menu = false; action() })
+                    }
+                }
+            }
         }
     }
 }

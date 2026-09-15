@@ -802,4 +802,11 @@
     <string name="queued_run_insert">تشغيل تالياً</string>
     <string name="queued_run_cancel">إلغاء الرسالة من الطابور</string>
     <string name="background_agent_summary">%1$s · %2$s</string>
+    <string name="instances_title">الخوادم</string>
+    <string name="instances_add">إضافة خادم</string>
+    <string name="instances_current">الحالي</string>
+    <string name="instances_empty">لا توجد خوادم محفوظة</string>
+    <string name="instances_saved">الخوادم المحفوظة</string>
+    <string name="instances_label_hint">الاسم (المنزل، المكتب…)</string>
+    <string name="instances_delete_body">إزالة هذا الخادم من هذا الهاتف؟ لا يتأثر الخادم.</string>
 </resources>

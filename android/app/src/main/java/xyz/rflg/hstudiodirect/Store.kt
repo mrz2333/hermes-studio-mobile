@@ -36,6 +36,11 @@ class Store(context: Context) {
         get() = prefs.getString(KEY_TOKEN, "").orEmpty()
         set(value) = prefs.edit().putString(KEY_TOKEN, value).apply()
 
+    /** Every Studio this phone has signed in to, newest first. */
+    var instances: List<StudioInstance>
+        get() = instancesFromJson(prefs.getString(KEY_INSTANCES, "").orEmpty())
+        set(value) = prefs.edit().putString(KEY_INSTANCES, instancesToJson(value)).apply()
+
     var profile: String
         get() = prefs.getString(KEY_PROFILE, "").orEmpty()
         set(value) = prefs.edit().putString(KEY_PROFILE, value).apply()
@@ -76,6 +81,7 @@ class Store(context: Context) {
 
     private companion object {
         const val KEY_URL = "base_url"
+        const val KEY_INSTANCES = "instances"
         const val KEY_TOKEN = "token"
         const val KEY_PROFILE = "profile"
         const val KEY_SESSION_PREFIX = "session_"

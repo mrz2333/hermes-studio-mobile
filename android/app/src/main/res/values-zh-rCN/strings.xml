@@ -807,4 +807,11 @@
     <string name="queued_run_insert">优先运行</string>
     <string name="queued_run_cancel">取消排队消息</string>
     <string name="background_agent_summary">%1$s · %2$s</string>
+    <string name="instances_title">实例</string>
+    <string name="instances_add">添加实例</string>
+    <string name="instances_current">当前</string>
+    <string name="instances_empty">还没有保存的实例</string>
+    <string name="instances_saved">已保存的实例</string>
+    <string name="instances_label_hint">名称（例如：家里、公司）</string>
+    <string name="instances_delete_body">从这台手机移除该实例？（不影响服务器）</string>
 </resources>
