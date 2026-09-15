@@ -117,3 +117,18 @@ jobs:
             Android 会提示「Play 保护机制未见过此开发者」——选择**仍要安装**即可。
           files: out/hermes-studio-android.apk
           prerelease: true
+
+      # 版本化发布，让每个 vX.Y.Z tag 都有对应的下载页（滚动 tag 供应用自更新用）
+      - name: Publish versioned build
+        if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ env.MOBILE_VERSION }}
+          name: HStudio 直连 v${{ env.MOBILE_VERSION }}
+          body: |
+            对应 git tag `v${{ env.MOBILE_VERSION }}`，构建自 `${{ github.sha }}`。
+
+            安装：覆盖安装即可（同签名）。首次安装若提示「Play 保护机制未见过此开发者」，选**仍要安装**。
+          files: out/hermes-studio-android.apk
+          make_latest: false
+          prerelease: false
