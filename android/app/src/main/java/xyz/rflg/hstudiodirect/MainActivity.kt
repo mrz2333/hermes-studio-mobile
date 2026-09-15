@@ -877,7 +877,6 @@ private fun SessionRow(
         }
     }
 }
-}
 
 /** HStudio session-running-light: 2px rainbow gradient bar flowing left→right. */
 @Composable

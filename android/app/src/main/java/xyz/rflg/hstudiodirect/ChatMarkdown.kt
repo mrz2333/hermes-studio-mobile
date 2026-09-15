@@ -3,6 +3,7 @@ package xyz.rflg.hstudiodirect
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -623,11 +624,13 @@ private fun highlightCode(code: String, dark: Boolean): AnnotatedString {
  */
 @Composable
 private fun MarkdownTable(block: ChatMarkdownBlock.Table) {
+    val dark = isSystemInDarkTheme()
+    val selectedBg = inkSelectedBg(dark)
     val columns = block.header.size
     if (columns == 0) return
     val sample = block.rows + listOf(block.header)
-    val weights = List(columns) { column ->
-        val widest = sample.maxOfOrNull { it.getOrElse(column) { "" }.length } ?: 1
+    val weights = List(columns) { column -> 
+        val widest = sample.maxOfOrNull { it.getOrElse(column) { "" } }?.length ?: 1
         widest.coerceIn(3, 42).toFloat()
     }
     val outline = MaterialTheme.colorScheme.outlineVariant
@@ -635,7 +638,7 @@ private fun MarkdownTable(block: ChatMarkdownBlock.Table) {
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
-            .border(1.dp, outline, RoundedCornerShape(8.dp)),
+            .border(1.dp, selectedBg, RoundedCornerShape(8.dp)),
     ) {
         TableRow(
             cells = block.header,
