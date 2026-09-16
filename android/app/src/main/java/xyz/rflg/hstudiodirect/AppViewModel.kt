@@ -118,6 +118,12 @@ data class UiState(
     /** Profile whose entries are currently in [models]. */
     val modelsProfile: String? = null,
     val loadingModels: Boolean = false,
+    /**
+     * Last model-list failure. Kept separate from [error] because the picker
+     * renders as a bottom sheet above the screen that owns [error]; without it
+     * a failed load looks like a permanently empty sheet with no retry.
+     */
+    val modelsError: String? = null,
     /** Blank means the profile default, matching Studio's "Default" chip. */
     val reasoningEffort: String = "",
     /** BCP-47 tag chosen in Settings; blank follows the system. */
@@ -666,6 +672,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 sessionProvider = null,
                 models = emptyList(),
                 modelsProfile = null,
+                modelsError = null,
                 defaultModel = null,
                 serverConfig = null,
                 agentSettings = null,
@@ -697,6 +704,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 attachments = emptyList(),
                 models = if (it.modelsProfile == profile) it.models else emptyList(),
                 modelsProfile = it.modelsProfile.takeIf { loaded -> loaded == profile },
+                modelsError = if (it.modelsProfile == profile) it.modelsError else null,
                 loadingHistory = true,
                 error = null,
                 notice = null,
@@ -814,6 +822,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 loadingContext = false,
                 models = if (it.modelsProfile == profile) it.models else emptyList(),
                 modelsProfile = it.modelsProfile.takeIf { loaded -> loaded == profile },
+                modelsError = if (it.modelsProfile == profile) it.modelsError else null,
                 error = null,
                 notice = null,
                 selectedRuntime = runtime,
@@ -944,7 +953,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     model = selectedModel,
                     provider = selectedProvider,
                     runtime = _state.value.selectedRuntime,
-                    cachedPageId = resumePageIds[sessionId],
+                    cachedPageId = resumePageIds[sessionId]
+                        ?: store.getResumePageId(profile.ifBlank { "default" }, sessionId),
                 )
                     .collect { event ->
                         when (event) {
@@ -1018,7 +1028,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                                 state.copy(backgroundAgentRuns = tasks)
                             }
                             is RunEvent.ResumedState -> {
-                                event.pageId?.let { resumePageIds[sessionId] = it }
+                                event.pageId?.let { pageId ->
+                                    resumePageIds[sessionId] = pageId
+                                    store.setResumePageId(profile.ifBlank { "default" }, sessionId, pageId)
+                                }
                                 _state.update { state ->
                                     val restoredLines = event.messages?.mapNotNull { message ->
                                         when (message.role) {
@@ -1416,28 +1429,32 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     // ── model and reasoning ───────────────────────────────────────────────
 
-    fun loadModels() {
+    fun loadModels(force: Boolean = false) {
         val profile = currentProfile()
         val current = _state.value
-        if (current.modelsProfile == profile && (current.models.isNotEmpty() || current.loadingModels)) return
+        if (!force && current.modelsProfile == profile && (current.models.isNotEmpty() || current.loadingModels)) return
         _state.update {
             it.copy(
                 models = if (it.modelsProfile == profile) it.models else emptyList(),
                 modelsProfile = profile,
                 loadingModels = true,
+                modelsError = null,
             )
         }
         viewModelScope.launch {
             runCatching { withContext(Dispatchers.IO) { api.availableModels(profile) } }
                 .onSuccess { models ->
                     _state.update {
-                        if (it.modelsProfile == profile) it.copy(models = models, loadingModels = false) else it
+                        if (it.modelsProfile == profile) it.copy(models = models, loadingModels = false, modelsError = null) else it
                     }
                 }
                 .onFailure { failure ->
                     _state.update {
                         if (it.modelsProfile == profile) {
-                            it.copy(loadingModels = false, error = failure.readableMessage(localized))
+                            it.copy(
+                                loadingModels = false,
+                                modelsError = failure.readableMessage(localized),
+                            )
                         } else {
                             it
                         }

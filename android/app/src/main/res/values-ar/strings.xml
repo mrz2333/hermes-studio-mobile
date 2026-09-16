@@ -103,6 +103,7 @@
     <string name="thinking_expand">عرض تفاصيل التفكير</string>
     <string name="thinking_collapse">إخفاء تفاصيل التفكير</string>
     <string name="tool_status_done">اكتمل</string>
+    <string name="tool_status_running">قيد التشغيل</string>
     <string name="tool_status_failed">فشل</string>
     <string name="conversation_stop">إيقاف</string>
     <string name="reasoning_show">التفكير</string>

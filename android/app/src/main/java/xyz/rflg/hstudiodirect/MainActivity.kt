@@ -33,6 +33,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
@@ -62,12 +63,12 @@ import androidx.compose.material.icons.automirrored.filled.Rule
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.Psychology
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
@@ -137,6 +138,7 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -617,6 +619,7 @@ private fun ChatsScreen(state: UiState, viewModel: AppViewModel) {
                                 SessionRow(
                                     session = session,
                                     avatar = state.avatarOf(session.profile),
+                                    isActive = state.openSession?.id == session.id,
                                     onClick = { viewModel.openSession(session) },
                                     onLongClick = { manage = session },
                                 )
@@ -802,13 +805,19 @@ private fun InstanceRow(
 private fun SessionRow(
     session: SessionSummary,
     avatar: AvatarSpec?,
+    isActive: Boolean,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
 ) {
     val running = session.running
+    // HStudio session-list keeps the conversation that is open highlighted
+    // with --ink-selected-bg; the active flag is computed at the call site
+    // from UiState.openSession (SessionSummary has no selection field).
+    val inkDark = MaterialTheme.colorScheme.isInkDark()
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .background(if (isActive) inkSelectedBg(inkDark) else Color.Unspecified)
             .combinedClickable(onClick = onClick, onLongClick = onLongClick)
             .padding(horizontal = 13.dp, vertical = 11.dp),
     ) {
@@ -1402,7 +1411,8 @@ private fun ConversationScreen(state: UiState, viewModel: AppViewModel) {
                 LazyColumn(
                     state = listState,
                         modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 20.dp),
+                    // HStudio .message-list: padding 20px all around.
+                    contentPadding = PaddingValues(20.dp),
                     verticalArrangement = Arrangement.spacedBy(2.dp),
                 ) {
                     items(state.lines) { line ->
@@ -1588,16 +1598,18 @@ private fun MessageBubble(
     val hasWideContent = hasThinking || parsed.files.isNotEmpty()
 
     // HStudio message-bubble: padding:10px 14px, border-radius:10px
-    // background: --ink-bg-message (#f1f1f1 light / #1f1f1f dark)
-    // user messages use --ink-accent (#333 light / #4ca66a dark = primary)
+    // background: --ink-bg-message (#f1f1f1 light / #262828 dark)
+    // user messages use --ink-accent (#333 light / #eeeeeb dark) with
+    // --ink-on-accent text; the brand green stays reserved for links and status.
+    val inkDark = MaterialTheme.colorScheme.isInkDark()
     val bubbleColor = when {
-        line.isError -> MaterialTheme.colorScheme.errorContainer
-        isUser -> MaterialTheme.colorScheme.primary
-        else -> MaterialTheme.colorScheme.surfaceContainerHigh
+        line.isError -> inkErrorSoft(inkDark)
+        isUser -> inkAccent(inkDark)
+        else -> inkMessageBg(inkDark)
     }
     val onBubble = when {
-        line.isError -> MaterialTheme.colorScheme.onErrorContainer
-        isUser -> MaterialTheme.colorScheme.onPrimary
+        line.isError -> inkError(inkDark)
+        isUser -> inkOnAccent(inkDark)
         else -> MaterialTheme.colorScheme.onSurface
     }
 
@@ -1637,7 +1649,6 @@ private fun MessageBubble(
                 shape = RoundedCornerShape(10.dp),
                 colors = CardDefaults.cardColors(containerColor = bubbleColor, contentColor = onBubble),
                 elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-                border = if (!isUser && !line.isError) BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant) else null,
             ) {
                 Column(
                     modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
@@ -1799,76 +1810,65 @@ private fun ToolStepRow(tool: ChatToolStep, nowMillis: Long) {
     } else {
         null
     }
+    // HStudio .tool-call-item: 26dp compact bar, 7px radius, 11sp monospace,
+    // --ink-bg-card-hover fill + --ink-input-border hairline. Status rides on
+    // the leading dot/icon instead of a second text row.
+    val inkDark = MaterialTheme.colorScheme.isInkDark()
+    val toolFont = MaterialTheme.typography.labelSmall.copy(
+        fontSize = 11.sp,
+        fontFamily = FontFamily.Monospace,
+        textDirection = TextDirection.Ltr,
+    )
     Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
-        shape = RoundedCornerShape(9.dp),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        modifier = Modifier.widthIn(max = 260.dp),
+        color = inkCardHover(inkDark),
+        shape = RoundedCornerShape(7.dp),
+        border = BorderStroke(1.dp, inkInputBorder(inkDark)),
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 9.dp, vertical = 7.dp),
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp).heightIn(min = 20.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             Icon(
-                Icons.Filled.Build,
-                contentDescription = null,
-                modifier = Modifier.size(16.dp),
+                when (tool.status) {
+                    ToolRunStatus.Done -> Icons.Filled.Check
+                    ToolRunStatus.Running -> Icons.Filled.PlayArrow
+                    ToolRunStatus.Error -> Icons.Filled.Close
+                },
+                contentDescription = stringResource(
+                    when (tool.status) {
+                        ToolRunStatus.Done -> R.string.tool_status_done
+                        ToolRunStatus.Running -> R.string.tool_status_running
+                        ToolRunStatus.Error -> R.string.tool_status_failed
+                    },
+                ),
+                modifier = Modifier.size(13.dp),
                 tint = when (tool.status) {
-                    ToolRunStatus.Done -> MaterialTheme.colorScheme.primary
+                    ToolRunStatus.Done -> Color(0xFF4CA66A)
                     ToolRunStatus.Running -> MaterialTheme.colorScheme.tertiary
                     ToolRunStatus.Error -> MaterialTheme.colorScheme.error
                 },
             )
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    tool.name,
-                    style = MaterialTheme.typography.bodySmall.copy(
-                        fontFamily = FontFamily.Monospace,
-                        textDirection = TextDirection.Ltr,
-                    ),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                tool.detail?.takeIf { it.isNotBlank() }?.let { detail ->
-                    Text(
-                        detail,
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            fontFamily = FontFamily.Monospace,
-                            textDirection = TextDirection.Ltr,
-                        ),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
+            Text(
+                buildString {
+                    append(tool.name)
+                    tool.detail?.takeIf { it.isNotBlank() }?.let { append(' '); append(it) }
+                },
+                style = toolFont,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f, fill = false),
+            )
+            if (tool.status == ToolRunStatus.Running) {
+                CircularProgressIndicator(modifier = Modifier.size(11.dp), strokeWidth = 1.5.dp)
             }
             seconds?.let {
                 Text(
                     formatToolDuration(it),
-                    style = MaterialTheme.typography.labelSmall.copy(
-                        fontFamily = FontFamily.Monospace,
-                        textDirection = TextDirection.Ltr,
-                    ),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            when (tool.status) {
-                ToolRunStatus.Running -> CircularProgressIndicator(
-                    modifier = Modifier.size(15.dp),
-                    strokeWidth = 2.dp,
-                )
-                ToolRunStatus.Done -> Icon(
-                    Icons.Filled.Check,
-                    contentDescription = stringResource(R.string.tool_status_done),
-                    modifier = Modifier.size(17.dp),
-                    tint = androidx.compose.ui.graphics.Color(0xFF4CA66A),
-                )
-                ToolRunStatus.Error -> Icon(
-                    Icons.Filled.Close,
-                    contentDescription = stringResource(R.string.tool_status_failed),
-                    modifier = Modifier.size(17.dp),
-                    tint = MaterialTheme.colorScheme.error,
+                    style = toolFont,
+                    color = inkTextMuted(inkDark),
                 )
             }
         }
@@ -2146,18 +2146,16 @@ private fun Composer(
             onDismissRequest = { sheet = null },
             sheetState = rememberModalBottomSheetState(),
         ) {
-            PickerSheet(
+            ModelPickerSheet(
                 title = stringResource(R.string.sheet_model),
+                models = state.models,
                 loading = state.loadingModels,
-                rows = state.models.map { option ->
-                    PickerRow(
-                        label = option.id,
-                        detail = option.provider,
-                        selected = option.id == state.sessionModel,
-                    ) {
-                        viewModel.selectModel(option)
-                        sheet = null
-                    }
+                error = state.modelsError,
+                selectedId = state.sessionModel,
+                onRetry = { viewModel.loadModels(force = true) },
+                onSelect = { option ->
+                    viewModel.selectModel(option)
+                    sheet = null
                 },
             )
         }
@@ -2261,10 +2259,26 @@ private fun Composer(
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp),
         ) {
+            // HStudio textarea: --ink-bg-input fill, 10px radius, 1px
+            // --ink-input-border hairline, 14sp text.
+            val inkDark = MaterialTheme.colorScheme.isInkDark()
             OutlinedTextField(
                 value = draft,
                 onValueChange = onDraftChange,
-                placeholder = { Text(stringResource(R.string.composer_hint)) },
+                placeholder = {
+                    Text(
+                        stringResource(R.string.composer_hint),
+                        color = inkTextMuted(inkDark),
+                    )
+                },
+                textStyle = MaterialTheme.typography.bodyMedium,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = inkInputBg(inkDark),
+                    unfocusedContainerColor = inkInputBg(inkDark),
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = inkInputBorder(inkDark),
+                    cursorColor = MaterialTheme.colorScheme.primary,
+                ),
                 modifier = Modifier.fillMaxWidth().onFocusChanged {
                     if (fieldFocused && !it.isFocused && draft.isBlank() && state.attachments.isEmpty()) {
                         composerExpanded = false
@@ -2272,7 +2286,7 @@ private fun Composer(
                     fieldFocused = it.isFocused
                 },
                 maxLines = 5,
-                shape = RoundedCornerShape(20.dp),
+                shape = RoundedCornerShape(10.dp),
             )
         }
 
@@ -2422,16 +2436,18 @@ private fun ComposerActionButton(
 ) {
     val hasPayload = draft.isNotBlank() || state.attachments.isNotEmpty()
     val active = hasPayload || state.recording || state.sending
-    // HStudio composer-send-button: 30px 圆形, 未激活=灰底, 激活=accent 底
+    // HStudio composer-send-button: 30px circle, inactive = grey --ink-text-muted,
+    // active = --ink-accent fill (#333 light / #eeeeeb dark) + --ink-on-accent glyph.
+    val inkDark = MaterialTheme.colorScheme.isInkDark()
     val background = if (active) {
-        MaterialTheme.colorScheme.primary
+        inkAccent(inkDark)
     } else {
         MaterialTheme.colorScheme.surfaceContainerHighest
     }
     val tint = if (active) {
-        MaterialTheme.colorScheme.onPrimary
+        inkOnAccent(inkDark)
     } else {
-        MaterialTheme.colorScheme.onSurfaceVariant
+        inkTextMuted(inkDark)
     }
 
     Box(
@@ -2533,6 +2549,127 @@ private data class PickerRow(
     val selected: Boolean,
     val onClick: () -> Unit,
 )
+
+/**
+ * Studio's model catalogue can hold hundreds of entries across providers, so
+ * the picker needs a search field, provider headers, and a bounded scroll area
+ * instead of the flat [PickerSheet]. Model-load failures live in
+ * [UiState.modelsError] and must be surfaced here with a retry: the generic
+ * error banner renders on the screen underneath the bottom sheet, which made
+ * a failed load look like a permanently empty list.
+ */
+@Composable
+private fun ModelPickerSheet(
+    title: String,
+    models: List<ModelOption>,
+    loading: Boolean,
+    error: String?,
+    selectedId: String?,
+    onRetry: () -> Unit,
+    onSelect: (ModelOption) -> Unit,
+) {
+    var query by rememberSaveable { mutableStateOf("") }
+    val groups = remember(models, query) {
+        val clean = query.trim()
+        models
+            .filter {
+                clean.isBlank() ||
+                    it.id.contains(clean, ignoreCase = true) ||
+                    it.provider.contains(clean, ignoreCase = true)
+            }
+            .groupBy { it.provider.ifBlank { "—" } }
+            .toList()
+            .sortedBy { it.first.lowercase() }
+    }
+    Column(modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                title,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f),
+            )
+            Text(
+                "${models.size}",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            IconButton(onClick = onRetry, enabled = !loading, modifier = Modifier.size(32.dp)) {
+                Icon(
+                    Icons.Filled.Refresh,
+                    contentDescription = stringResource(R.string.models_refresh),
+                    modifier = Modifier.size(17.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        StudioSearchField(
+            value = query,
+            onValueChange = { query = it },
+            placeholder = stringResource(R.string.action_search),
+            modifier = Modifier.padding(horizontal = 20.dp),
+        )
+        error?.let { message ->
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    message,
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                TextButton(onClick = onRetry) { Text(stringResource(R.string.action_retry)) }
+            }
+        }
+        if (loading && models.isEmpty()) {
+            LoadingRow()
+        } else if (!loading && error == null && groups.isEmpty()) {
+            Text(
+                stringResource(R.string.sheet_empty),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
+            )
+        }
+        LazyColumn(
+            modifier = Modifier.fillMaxWidth().heightIn(max = 420.dp),
+            contentPadding = PaddingValues(bottom = 8.dp),
+        ) {
+            groups.forEach { (provider, options) ->
+                item(key = "provider-$provider") {
+                    Text(
+                        provider,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 2.dp),
+                    )
+                }
+                items(options, key = { "model-${provider}-${it.id}" }) { option ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onSelect(option) }
+                            .padding(horizontal = 20.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(option.id, style = MaterialTheme.typography.bodyMedium)
+                        }
+                        if (option.id == selectedId) {
+                            Icon(Icons.Filled.Check, contentDescription = stringResource(R.string.action_selected))
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
 
 @Composable
 private fun PickerSheet(title: String, loading: Boolean, rows: List<PickerRow>) {
@@ -3522,14 +3659,16 @@ private fun ProfileSettings(state: UiState, viewModel: AppViewModel) {
             onDismissRequest = { modelSheet = false },
             sheetState = rememberModalBottomSheetState(),
         ) {
-            PickerSheet(
+            ModelPickerSheet(
                 title = stringResource(R.string.settings_default_model_title, profile),
+                models = state.models,
                 loading = state.loadingModels,
-                rows = state.models.map { option ->
-                    PickerRow(label = option.id, detail = option.provider, selected = option.id == state.defaultModel) {
-                        viewModel.setDefaultModel(option)
-                        modelSheet = false
-                    }
+                error = state.modelsError,
+                selectedId = state.defaultModel,
+                onRetry = { viewModel.loadModels(force = true) },
+                onSelect = { option ->
+                    viewModel.setDefaultModel(option)
+                    modelSheet = false
                 },
             )
         }

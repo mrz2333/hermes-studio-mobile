@@ -1,5 +1,6 @@
 package xyz.rflg.hstudiodirect
 
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.Typography
@@ -8,6 +9,7 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -132,6 +134,64 @@ fun HermesTheme(appearance: String = "system", content: @Composable () -> Unit) 
         content = content,
     )
 }
+
+/**
+ * HStudio ink tokens (app.css `--ink-*`).
+ *
+ * These are deliberately **plain functions**, not @Composable: they are pure
+ * lookups against a dark/light flag, so calling them inside a recomposition
+ * costs nothing and they stay usable from non-composable helpers. Pick the
+ * flag with [isInkDark] off the active [ColorScheme].
+ */
+fun ColorScheme.isInkDark(): Boolean = background.luminance() < 0.5f
+
+/** --ink-bg-message: AI message bubble background. */
+fun inkMessageBg(dark: Boolean): Color =
+    if (dark) Color(0xFF262828) else Color(0xFFF1F1F1)
+
+/** --ink-accent: user bubble / active send button (#333 light, #eeeeeb dark). */
+fun inkAccent(dark: Boolean): Color =
+    if (dark) Color(0xFFEEEEEB) else Color(0xFF333333)
+
+/** --ink-on-accent: text drawn on [inkAccent]. */
+fun inkOnAccent(dark: Boolean): Color =
+    if (dark) Color(0xFF191A1A) else Color.White
+
+/** --ink-bg-card-hover: tool-call rows, attach chips, avatar discs. */
+fun inkCardHover(dark: Boolean): Color =
+    if (dark) Color(0xFF222323) else Color(0xFFFAFAFA)
+
+/** --ink-bg-input: composer field background. */
+fun inkInputBg(dark: Boolean): Color =
+    if (dark) Color(0xFF1E1F1F) else Color.White
+
+/** --ink-input-border: hairline on the composer field and tool rows. */
+fun inkInputBorder(dark: Boolean): Color =
+    if (dark) Color(0x29FFFFFF) else Color(0x2E333333)   // .16 white / .18 #333
+
+/** --ink-bg-code: fenced code block background. */
+fun inkCodeBg(dark: Boolean): Color =
+    if (dark) Color(0xFF131414) else Color(0xFFF4F4F4)
+
+/** --ink-selected-bg: active row in the session list. */
+fun inkSelectedBg(dark: Boolean): Color =
+    if (dark) Color(0x1FFFFFFF) else Color(0x1A333333)
+
+/** --ink-text-muted: timestamps and secondary chrome. */
+fun inkTextMuted(dark: Boolean): Color =
+    if (dark) Color(0xFF858987) else Color(0xFF999999)
+
+/** --ink-error-soft: tinted background behind error notes and bubbles. */
+fun inkErrorSoft(dark: Boolean): Color =
+    if (dark) Color(0x1FEF8C87) else Color(0x14C62828)
+
+/** --ink-error: error foreground (#c62828 light, #ef8c87 dark). */
+fun inkError(dark: Boolean): Color =
+    if (dark) Color(0xFFEF8C87) else Color(0xFFC62828)
+
+/** --ink-bg-card: sheets, composer area, panels. */
+fun inkCardBg(dark: Boolean): Color =
+    if (dark) Color(0xFF181919) else Color.White
 
 /** Studio shows a short clock for today and a date for older rows. */
 fun formatStamp(raw: String?): String {

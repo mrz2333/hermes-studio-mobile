@@ -52,6 +52,16 @@ class Store(context: Context) {
         prefs.edit().putString(sessionKey(profile), sessionId).apply()
     }
 
+    /** Saves the latest resume page id for a session so the app can restore
+        its state after the process is killed and restarted. */
+    fun setResumePageId(profile: String, sessionId: String, pageId: String) {
+        prefs.edit().putString("resume_${profile}_$sessionId", pageId).apply()
+    }
+
+    /** Returns the last known resume page id for a session, or null. */
+    fun getResumePageId(profile: String, sessionId: String): String? =
+        prefs.getString("resume_${profile}_$sessionId", null)
+
     var onboarded: Boolean
         get() = prefs.getBoolean(KEY_ONBOARDED, false)
         set(value) = prefs.edit().putBoolean(KEY_ONBOARDED, value).apply()

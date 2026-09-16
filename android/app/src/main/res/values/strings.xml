@@ -104,6 +104,7 @@
     <string name="thinking_expand">Show thinking details</string>
     <string name="thinking_collapse">Hide thinking details</string>
     <string name="tool_status_done">Completed</string>
+    <string name="tool_status_running">Running</string>
     <string name="tool_status_failed">Failed</string>
     <string name="conversation_stop">Stop</string>
     <string name="reasoning_show">Reasoning</string>

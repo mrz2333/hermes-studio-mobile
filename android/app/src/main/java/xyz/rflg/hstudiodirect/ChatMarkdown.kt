@@ -18,6 +18,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -501,11 +502,15 @@ private fun MarkdownLine(
 /** Fenced code keeps its own line breaks and scrolls sideways instead of wrapping. */
 @Composable
 private fun MarkdownCodeBlock(block: ChatMarkdownBlock.Code) {
+    val inkDark = MaterialTheme.colorScheme.isInkDark()
+    // Highlighting is cached per (text, theme) so scrolling and unrelated
+    // recompositions never re-run the tokenizer over a long block.
+    val highlighted = remember(block.text, inkDark) { highlightCode(block.text, inkDark) }
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
-            .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.075f))
+            .background(inkCodeBg(inkDark))
             .padding(vertical = 8.dp),
     ) {
         if (block.language.isNotBlank()) {
@@ -519,12 +524,55 @@ private fun MarkdownCodeBlock(block: ChatMarkdownBlock.Code) {
         val scroll = rememberScrollState()
         Box(modifier = Modifier.fillMaxWidth().horizontalScroll(scroll)) {
             Text(
-                text = AnnotatedString(block.text),
+                text = highlighted,
                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 2.dp),
                 style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
                 softWrap = false,
                 color = MaterialTheme.colorScheme.onSurface,
             )
+        }
+    }
+}
+
+/** Above this size the block falls back to plain text so streaming stays smooth. */
+private const val CODE_HIGHLIGHT_LIMIT = 20_000
+
+private val CodeComment = Color(0xFF8A8F98)
+private val CodeKeywordLight = Color(0xFF1F5FBF)
+private val CodeKeywordDark = Color(0xFF79B8FF)
+private val CodeStringLight = Color(0xFF2E7D4F)
+private val CodeStringDark = Color(0xFF6FD79A)
+private val CodeNumberLight = Color(0xFF9A6700)
+private val CodeNumberDark = Color(0xFFE3B341)
+
+/**
+ * A single combined scan (one regex pass, named groups) instead of one sweep
+ * per token class — v1.9.0's stacked per-scan highlighter made long code
+ * blocks janky while a reply streamed.
+ */
+private val CodeToken = Regex(
+    """(?<comment>(?<!:)//[^\n]*|/\*.*?\*/|(?<![^\s])#[^\n]*)""" +
+        """|(?<string>"(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*')""" +
+        """|(?<keyword>\b(?:fun|val|var|if|else|when|while|for|return|import|class|object|interface|extends|implements|new|try|catch|finally|throw|def|async|await|public|private|protected|static|final|struct|enum|package|func|switch|case|break|continue|in|is|as|and|or|not|let|const|fn|mut|match|type|export|default|from|require|this|super|true|false|None|True|False|undefined|self|lambda|yield|go|defer|range|elif|except|raise|with|pass|assert)\b)""" +
+        """|(?<number>\b0[xX][0-9a-fA-F]+\b|\b\d[\d_]*(?:\.\d[\d_]*)?\b)""",
+    setOf(RegexOption.DOT_MATCHES_ALL),
+)
+
+private fun highlightCode(text: String, dark: Boolean): AnnotatedString {
+    if (text.length > CODE_HIGHLIGHT_LIMIT) return AnnotatedString(text)
+    return buildAnnotatedString {
+        append(text)
+        for (match in CodeToken.findAll(text)) {
+            val style = when {
+                match.groups["comment"] != null -> SpanStyle(color = CodeComment, fontStyle = FontStyle.Italic)
+                match.groups["string"] != null -> SpanStyle(color = if (dark) CodeStringDark else CodeStringLight)
+                match.groups["keyword"] != null -> SpanStyle(
+                    color = if (dark) CodeKeywordDark else CodeKeywordLight,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                else -> SpanStyle(color = if (dark) CodeNumberDark else CodeNumberLight)
+            }
+            addStyle(style, match.range.first, match.range.last + 1)
         }
     }
 }

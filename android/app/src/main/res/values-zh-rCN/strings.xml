@@ -86,6 +86,7 @@
     <string name="thinking_expand">显示思考详情</string>
     <string name="thinking_collapse">隐藏思考详情</string>
     <string name="tool_status_done">已完成</string>
+    <string name="tool_status_running">运行中</string>
     <string name="tool_status_failed">失败</string>
     <string name="conversation_stop">停止</string>
     <string name="reasoning_show">推理</string>
