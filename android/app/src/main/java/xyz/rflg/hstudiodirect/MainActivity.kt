@@ -48,6 +48,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.isImeVisible
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
@@ -1121,7 +1122,12 @@ private fun SessionRow(
     isActive: Boolean,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
+    isActive: Boolean = false,
 ) {
+    val dark = isSystemInDarkTheme()
+    val cardHoverBg = inkCardHover(dark)
+    val inputBorder = inkInputBorder(dark)
+    val selectedBg = inkSelectedBg(dark)
     val running = session.running
     // HStudio .session-item--active (App app-service CSS): background
     // --ink-bg-secondary + .session-title font-weight 550. The active flag is
@@ -1133,7 +1139,9 @@ private fun SessionRow(
             .fillMaxWidth()
             .background(if (isActive) inkSecondaryBg(inkDark) else Color.Unspecified)
             .combinedClickable(onClick = onClick, onLongClick = onLongClick)
-            .padding(horizontal = 13.dp, vertical = 11.dp),
+            .padding(horizontal = 14.dp, vertical = 10.dp)
+            .background(if (isActive) selectedBg else Color.Transparent),
+        verticalArrangement = Arrangement.spacedBy(11.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             ProfileAvatar(
@@ -1144,7 +1152,7 @@ private fun SessionRow(
             Spacer(Modifier.width(12.dp))
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(3.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
@@ -1169,7 +1177,7 @@ private fun SessionRow(
                 }
                 Text(
                     text = listOfNotNull(session.agentId ?: session.source.takeIf { it != "cli" }, session.profile, session.model).joinToString(" · "),
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -1177,7 +1185,7 @@ private fun SessionRow(
                 if (running && !session.activity.isNullOrBlank()) {
                     Text(
                         session.activity,
-                        style = MaterialTheme.typography.labelSmall,
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp),
                         color = MaterialTheme.colorScheme.primary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,

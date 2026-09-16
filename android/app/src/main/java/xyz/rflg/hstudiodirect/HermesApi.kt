@@ -603,6 +603,8 @@ class HermesApi(
                 archived = item.optBoolean("is_archived", false) || item.optInt("is_archived", 0) != 0,
                 categoryId = item.optInt("category_id", 0).takeIf { it > 0 },
                 workspace = firstNonBlank(item, "workspace", "cwd"),
+                running = item.optBoolean("running", false) || item.optString("status", "") == "running" || item.optString("kanban_status", "") == "running",
+                activity = firstNonBlank(item, "activity", "live_activity", "current_step"),
             )
         }
 
