@@ -181,6 +181,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.core.content.FileProvider
 import java.io.File
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
@@ -812,14 +813,15 @@ private fun SessionRow(
     onLongClick: () -> Unit,
 ) {
     val running = session.running
-    // HStudio session-list keeps the conversation that is open highlighted
-    // with --ink-selected-bg; the active flag is computed at the call site
-    // from UiState.openSession (SessionSummary has no selection field).
+    // HStudio .session-item--active (App app-service CSS): background
+    // --ink-bg-secondary + .session-title font-weight 550. The active flag is
+    // computed at the call site from UiState.openSession (SessionSummary has
+    // no selection field). --ink-selected-bg is for dots/rings, not row fills.
     val inkDark = MaterialTheme.colorScheme.isInkDark()
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(if (isActive) inkSelectedBg(inkDark) else Color.Unspecified)
+            .background(if (isActive) inkSecondaryBg(inkDark) else Color.Unspecified)
             .combinedClickable(onClick = onClick, onLongClick = onLongClick)
             .padding(horizontal = 13.dp, vertical = 11.dp),
     ) {
@@ -835,7 +837,15 @@ private fun SessionRow(
                 verticalArrangement = Arrangement.spacedBy(3.dp),
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(text = session.title, modifier = Modifier.weight(1f), maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        text = session.title,
+                        modifier = Modifier.weight(1f),
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        style = MaterialTheme.typography.titleSmall,
+                        color = if (isActive) inkTextPrimary(inkDark) else Color.Unspecified,
+                        fontWeight = if (isActive) FontWeight.W500 else FontWeight.SemiBold,
+                    )
                     Spacer(Modifier.width(8.dp))
                     if (running) {
                         Text("●", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelSmall)
@@ -1687,8 +1697,9 @@ private fun quoteForReply(quoted: String, reply: String): String {
 
 @Composable
 private fun ChatFileCard(file: ChatFileLink, onDownload: () -> Unit) {
-    // HStudio --ink-file-card-*: #e5e7ea fill + #d1d5da hairline in light;
-    // dark falls back to the ink card-hover surface with a white hairline.
+    // HStudio --ink-file-card-*: light #e5e7ea fill + #d1d5da hairline; the
+    // official App ships real dark tokens (#202121 / #2d2f2e) with the icon
+    // chip on --ink-file-card-icon-bg.
     val inkDark = MaterialTheme.colorScheme.isInkDark()
     Surface(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onDownload),
@@ -1705,14 +1716,14 @@ private fun ChatFileCard(file: ChatFileLink, onDownload: () -> Unit) {
                 modifier = Modifier
                     .size(30.dp)
                     .clip(RoundedCornerShape(7.dp))
-                    .background(inkCardBg(inkDark)),
+                    .background(inkFileCardIconBg(inkDark)),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
                     Icons.AutoMirrored.Filled.InsertDriveFile,
                     contentDescription = null,
                     modifier = Modifier.size(18.dp),
-                    tint = MaterialTheme.colorScheme.primary,
+                    tint = inkTextMuted(inkDark),
                 )
             }
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -1804,21 +1815,26 @@ private fun ThinkingTimeline(line: ChatLine) {
             ) {
                 line.tools.forEach { tool -> ToolStepRow(tool, nowMillis) }
                 line.reasoning?.takeIf { it.isNotBlank() }?.let { reasoning ->
-                    // HStudio .tool-detail-reasoning: max-height 300px, scrolls
-                    // internally; 1px $border-light hairline; rgba(text,.035)
-                    // fill; $text-secondary 12sp text.
+                    // HStudio .tool-details (official App): --ink-bg-code fill,
+                    // 1px --ink-border hairline, radius 6px; the reasoning text
+                    // (.tool-detail-reasoning) is 12sp italic --ink-text-secondary
+                    // at .9 opacity. Height is capped so long chains scroll.
                     val inkDark = MaterialTheme.colorScheme.isInkDark()
                     val reasoningScroll = rememberScrollState()
                     Surface(
                         modifier = Modifier.fillMaxWidth().heightIn(max = 300.dp),
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.035f),
-                        shape = RoundedCornerShape(7.dp),
-                        border = BorderStroke(1.dp, inkBorderLight(inkDark)),
+                        color = inkCodeBg(inkDark),
+                        shape = RoundedCornerShape(6.dp),
+                        border = BorderStroke(1.dp, inkBorder(inkDark)),
                     ) {
                         Text(
                             reasoning,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = inkTextSecondary(inkDark),
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                fontSize = 12.sp,
+                                lineHeight = 19.sp,
+                                fontStyle = FontStyle.Italic,
+                            ),
+                            color = inkTextSecondary(inkDark).copy(alpha = 0.9f),
                             modifier = Modifier
                                 .verticalScroll(reasoningScroll)
                                 .padding(horizontal = 10.dp, vertical = 8.dp),
@@ -2269,31 +2285,27 @@ private fun Composer(
         return
     }
 
-    // HStudio ChatInput.vue `.input-wrapper`: $bg-card fill, 1px
-    // --input-border-color hairline, 18px radius, 0 8px 28px rgba(0,0,0,.08)
-    // shadow that deepens on focus-within.
+    // HStudio .composer-wrapper (official App): --ink-bg-card fill, 1px
+    // --ink-input-border hairline, 18px radius, fixed --ink-shadow-lg
+    // (0 8px 24px rgba(0,0,0,.09/.3)). There is no focus-color border rule.
     val inkDark = MaterialTheme.colorScheme.isInkDark()
     Surface(
         modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 8.dp, vertical = 7.dp),
         shape = RoundedCornerShape(18.dp),
         color = inkCardBg(inkDark),
-        border = BorderStroke(
-            1.dp,
-            if (fieldFocused) MaterialTheme.colorScheme.primary.copy(alpha = 0.5f) else inkInputBorder(inkDark),
-        ),
+        border = BorderStroke(1.dp, inkInputBorder(inkDark)),
         tonalElevation = 0.dp,
         shadowElevation = 8.dp,
     ) {
     Column(modifier = Modifier.fillMaxWidth().padding(top = 6.dp)) {
         if (state.attachments.isNotEmpty() || state.attaching) {
-            // `.attachment-previews`: wrap, gap 8px, 10px bottom pad.
-            FlowRow(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+            // .composer-attachment-strip: nowrap horizontal scroll, gap 7px.
+            Row(
+                modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(7.dp),
             ) {
                 state.attachments.forEach { file ->
-                    InkAttachmentChip(file.name) { viewModel.removeAttachment(file) }
+                    InkAttachmentChip(file) { viewModel.removeAttachment(file) }
                 }
                 if (state.attaching) InkAttachmentBusyChip()
             }
@@ -2498,18 +2510,18 @@ private fun ComposerActionButton(
 ) {
     val hasPayload = draft.isNotBlank() || state.attachments.isNotEmpty()
     val active = hasPayload || state.recording || state.sending
-    // HStudio composer-send-button: 30px circle, inactive = grey --ink-text-muted,
-    // active = --ink-accent fill (#333 light / #eeeeeb dark) + --ink-on-accent glyph.
+    // HStudio .composer-send-button (official App): 30px circle; inactive is
+    // #fff glyph on --ink-text-muted, active is --ink-on-accent glyph on
+    // --ink-accent, and dark mode overrides the active pair to
+    // color:#191a1a / background:#e0e0e0.
     val inkDark = MaterialTheme.colorScheme.isInkDark()
-    val background = if (active) {
-        inkAccent(inkDark)
-    } else {
-        MaterialTheme.colorScheme.surfaceContainerHighest
+    val background = when {
+        active -> if (inkDark) Color(0xFFE0E0E0) else inkAccent(inkDark)
+        else -> inkTextMuted(inkDark)
     }
-    val tint = if (active) {
-        inkOnAccent(inkDark)
-    } else {
-        inkTextMuted(inkDark)
+    val tint = when {
+        active -> if (inkDark) Color(0xFF191A1A) else inkOnAccent(inkDark)
+        else -> Color.White
     }
 
     Box(
@@ -2542,17 +2554,19 @@ private fun ToolbarChip(
     label: String,
     onClick: () -> Unit,
 ) {
-    // HStudio ChatInput.vue `.input-model-button` / `.input-settings-button`:
-    // $text-secondary, 999px pill, max-width 190px, no border/ripple.
+    // HStudio .toolbar-button / .composer-toolbar-button (official App):
+    // no fill at all — just --ink-text-secondary glyph+label on transparent,
+    // min-width 35 × height 28, padding 0 4 0 6, gap 3, pill radius.
+    // Press feedback is --ink-pressed (handled by the clickable's ripple here).
     val inkDark = MaterialTheme.colorScheme.isInkDark()
     Row(
         modifier = Modifier
-            .clip(RoundedCornerShape(999.dp))
-            .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.04f))
+            .heightIn(min = 28.dp)
+            .clip(RoundedCornerShape(499.dp))
             .clickable(onClick = onClick)
-            .padding(horizontal = 8.dp, vertical = 6.dp),
+            .padding(start = 6.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        horizontalArrangement = Arrangement.spacedBy(3.dp),
     ) {
         Icon(
             icon,
@@ -2578,71 +2592,102 @@ private fun ToolbarChip(
 }
 
 /**
- * HStudio ChatInput.vue `.attachment-preview`: $bg-secondary fill, 1px
- * $border-color hairline, $radius-sm (6px). `.attachment-file` stacks a glyph
- * over an 11sp $text-secondary name inside 80–140dp; images become a 112×72
- * contain thumb. The remove button is `.attachment-remove` (18px dark disc,
- * always half-visible on touch devices via the `@media (hover: none)` rule).
+ * HStudio .composer-attachment (official App): 154×48 horizontal card on
+ * --ink-bg-card-hover, radius 9px, padding 5/25/5/5, gap 7. A 38×38 icon tile
+ * on --ink-bg-code carries the uppercase extension in 11sp/700 muted; the
+ * name is 11sp/15 primary text. Images collapse to a 48×48 square and their
+ * remove badge (17px, white glyph on rgba(0,0,0,.66)) floats to −5/−5. Files
+ * keep the plain muted ✕ at top 3 / right 5. Size subline omitted: Upload has
+ * no byte-size field and inventing one is worse than leaving the row out.
  */
 @Composable
-private fun InkAttachmentChip(name: String, onRemove: () -> Unit) {
+private fun InkAttachmentChip(upload: Upload, onRemove: () -> Unit) {
     val inkDark = MaterialTheme.colorScheme.isInkDark()
+    val name = upload.name
     val isImage = name.substringAfterLast('.', "").lowercase() in IMAGE_FILE_EXTENSIONS
     Box {
-        Surface(
-            modifier = Modifier
-                .widthIn(min = 80.dp, max = if (isImage) 112.dp else 140.dp),
-            color = inkSecondaryBg(inkDark),
-            shape = RoundedCornerShape(6.dp),
-            border = BorderStroke(1.dp, inkBorder(inkDark)),
-        ) {
-            if (isImage) {
-                Box(
-                    modifier = Modifier.size(width = 112.dp, height = 72.dp),
-                    contentAlignment = Alignment.Center,
+        if (isImage) {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(inkCodeBg(inkDark)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    Icons.Filled.Image,
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp),
+                    tint = inkTextMuted(inkDark),
+                )
+            }
+        } else {
+            Surface(
+                modifier = Modifier.width(154.dp).height(48.dp),
+                color = inkCardHover(inkDark),
+                shape = RoundedCornerShape(9.dp),
+            ) {
+                Row(
+                    modifier = Modifier.padding(start = 5.dp, end = 25.dp, top = 5.dp, bottom = 5.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(7.dp),
                 ) {
-                    Icon(
-                        Icons.Filled.Image,
-                        contentDescription = null,
-                        modifier = Modifier.size(26.dp),
-                        tint = inkTextSecondary(inkDark),
-                    )
-                }
-            } else {
-                Column(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(2.dp),
-                ) {
-                    Icon(
-                        Icons.AutoMirrored.Filled.InsertDriveFile,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                        tint = inkTextSecondary(inkDark),
-                    )
+                    Box(
+                        modifier = Modifier
+                            .size(38.dp)
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(inkCodeBg(inkDark)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            name.substringAfterLast('.', name).take(4).uppercase(),
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                textDirection = TextDirection.Ltr,
+                            ),
+                            color = inkTextMuted(inkDark),
+                            maxLines = 1,
+                        )
+                    }
                     Text(
                         name,
-                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
-                        color = inkTextSecondary(inkDark),
-                        maxLines = 1,
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontSize = 11.sp,
+                            lineHeight = 15.sp,
+                        ),
+                        color = inkTextPrimary(inkDark),
+                        maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.widthIn(max = 116.dp),
+                        modifier = Modifier.weight(1f),
                     )
                 }
             }
         }
-        Surface(
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(2.dp)
-                .size(18.dp)
-                .clickable(onClick = onRemove),
-            shape = CircleShape,
-            color = Color(0x80000000),
-            contentColor = Color.White,
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(Icons.Filled.Close, stringResource(R.string.action_remove), modifier = Modifier.size(12.dp))
+        if (isImage) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .offset(x = 5.dp, y = (-5).dp)
+                    .size(17.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xA8000000))
+                    .clickable(onClick = onRemove),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(Icons.Filled.Close, stringResource(R.string.action_remove), modifier = Modifier.size(11.dp), tint = Color.White)
+            }
+        } else {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 3.dp, end = 5.dp)
+                    .size(17.dp)
+                    .clip(CircleShape)
+                    .clickable(onClick = onRemove),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(Icons.Filled.Close, stringResource(R.string.action_remove), modifier = Modifier.size(14.dp), tint = inkTextMuted(inkDark))
             }
         }
     }
@@ -2652,17 +2697,16 @@ private fun InkAttachmentChip(name: String, onRemove: () -> Unit) {
 private fun InkAttachmentBusyChip() {
     val inkDark = MaterialTheme.colorScheme.isInkDark()
     Surface(
-        modifier = Modifier.widthIn(min = 80.dp),
-        color = inkSecondaryBg(inkDark),
-        shape = RoundedCornerShape(6.dp),
-        border = BorderStroke(1.dp, inkBorder(inkDark)),
+        modifier = Modifier.width(154.dp).height(48.dp),
+        color = inkCardHover(inkDark),
+        shape = RoundedCornerShape(9.dp),
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 14.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            CircularProgressIndicator(modifier = Modifier.size(13.dp), strokeWidth = 2.dp)
+            CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
             Text(
                 stringResource(R.string.composer_uploading),
                 style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),

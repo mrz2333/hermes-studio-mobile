@@ -173,7 +173,7 @@ fun inkInputBorder(dark: Boolean): Color =
 fun inkCodeBg(dark: Boolean): Color =
     if (dark) Color(0xFF131414) else Color(0xFFF4F4F4)
 
-/** --ink-selected-bg: active row in the session list. */
+/** --ink-selected-bg: dots, focus rings and tinted chips — NOT row fills. */
 fun inkSelectedBg(dark: Boolean): Color =
     if (dark) Color(0x1FFFFFFF) else Color(0x1A333333)
 
@@ -205,16 +205,31 @@ fun inkBorderLight(dark: Boolean): Color =
 fun inkTextSecondary(dark: Boolean): Color =
     if (dark) Color(0xFFB8BAB8) else Color(0xFF666666)
 
-/** --ink-bg-secondary: agent badge fill (light #f0f0f0, dark --UI-BG-1). */
+/** --ink-bg-secondary: agent badge fill, active session row (light #f0f0f0, dark #202121). */
 fun inkSecondaryBg(dark: Boolean): Color =
-    if (dark) Color(0xFF1F1F1F) else Color(0xFFF0F0F0)
+    if (dark) Color(0xFF202121) else Color(0xFFF0F0F0)
 
-/** --ink-file-card-bg / hover / border (light only; dark Studio falls back to inkCardHover). */
+/** --ink-text-primary: body copy, inline code, attachment names. */
+fun inkTextPrimary(dark: Boolean): Color =
+    if (dark) Color(0xFFEEEEEB) else Color(0xFF1A1A1A)
+
+/** --ink-pressed: tap feedback and the code-block header strip. */
+fun inkPressed(dark: Boolean): Color =
+    if (dark) Color(0x0FFFFFFF) else Color(0x0A000000)
+
+/** --ink-code-text: foreground inside fenced code blocks. */
+fun inkCodeText(dark: Boolean): Color =
+    if (dark) Color(0xFFE5E7EB) else Color(0xFF1F2937)
+
+/** --ink-file-card-*: official App dark tokens are real (#202121 / #2d2f2e / #181919). */
 fun inkFileCardBg(dark: Boolean): Color =
-    if (dark) Color(0xFF222323) else Color(0xFFE5E7EA)
+    if (dark) Color(0xFF202121) else Color(0xFFE5E7EA)
 
 fun inkFileCardBorder(dark: Boolean): Color =
-    if (dark) Color(0x29FFFFFF) else Color(0xFFD1D5DA)
+    if (dark) Color(0xFF2D2F2E) else Color(0xFFD1D5DA)
+
+fun inkFileCardIconBg(dark: Boolean): Color =
+    if (dark) Color(0xFF181919) else Color(0xFFF8F9FA)
 
 /** Studio shows a short clock for today and a date for older rows. */
 fun formatStamp(raw: String?): String {

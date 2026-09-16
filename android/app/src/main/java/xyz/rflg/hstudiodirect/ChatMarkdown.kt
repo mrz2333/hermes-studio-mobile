@@ -2,6 +2,7 @@ package xyz.rflg.hstudiodirect
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -22,10 +23,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
@@ -484,9 +488,10 @@ private fun MarkdownLine(
         text = chatMarkdownInline(
             text,
             linkColor = MaterialTheme.colorScheme.primary,
-            // HStudio `code:not(.hljs)`: --ink-bg-code fill, $accent-primary text.
+            // HStudio .markdown-body code (official App): --ink-bg-code fill,
+            // --ink-text-primary text, 4px radius, 13px mono, 2px/6px padding.
             codeBackground = inkCodeBg(inkDark),
-            codeColor = inkAccent(inkDark),
+            codeColor = inkTextPrimary(inkDark),
         ),
         modifier = modifier.fillMaxWidth(),
         style = style.copy(
@@ -526,7 +531,7 @@ private fun MarkdownQuoteRow(text: String) {
                 text,
                 linkColor = MaterialTheme.colorScheme.primary,
                 codeBackground = inkCodeBg(inkDark),
-                codeColor = inkAccent(inkDark),
+                codeColor = inkTextPrimary(inkDark),
             ),
             modifier = Modifier
                 .weight(1f)
@@ -540,36 +545,74 @@ private fun MarkdownQuoteRow(text: String) {
     }
 }
 
-/** Fenced code keeps its own line breaks and scrolls sideways instead of wrapping. */
+/**
+ * Fenced code keeps its own line breaks and scrolls sideways instead of
+ * wrapping. HStudio .markdown-native-code-block (official App): --ink-bg-code
+ * fill, 1px --ink-border hairline, 6px radius; when a language is known a
+ * 36px header strip on --ink-pressed shows the uppercase 10px muted label and
+ * a 48×30 copy affordance, split from the body by --ink-border.
+ */
 @Composable
 private fun MarkdownCodeBlock(block: ChatMarkdownBlock.Code) {
     val inkDark = MaterialTheme.colorScheme.isInkDark()
     // Highlighting is cached per (text, theme) so scrolling and unrelated
     // recompositions never re-run the tokenizer over a long block.
     val highlighted = remember(block.text, inkDark) { highlightCode(block.text, inkDark) }
+    val clipboard = LocalClipboardManager.current
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
-            .background(inkCodeBg(inkDark))
-            .padding(vertical = 8.dp),
+            .clip(RoundedCornerShape(6.dp))
+            .border(1.dp, inkBorder(inkDark), RoundedCornerShape(6.dp))
+            .background(inkCodeBg(inkDark)),
     ) {
         if (block.language.isNotBlank()) {
-            Text(
-                block.language,
-                modifier = Modifier.padding(horizontal = 10.dp, vertical = 0.dp),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(inkPressed(inkDark))
+                    .padding(start = 12.dp, end = 6.dp, top = 4.dp, bottom = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    block.language.uppercase(),
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        fontSize = 10.sp,
+                        lineHeight = 16.sp,
+                        textDirection = TextDirection.Ltr,
+                    ),
+                    color = inkTextMuted(inkDark),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(7.dp))
+                        .clickable { clipboard.setText(AnnotatedString(block.text)) }
+                        .padding(horizontal = 8.dp, vertical = 6.dp),
+                ) {
+                    Text(
+                        stringResource(R.string.message_copy),
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                        color = inkTextSecondary(inkDark),
+                    )
+                }
+            }
+            Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(inkBorder(inkDark)))
         }
         val scroll = rememberScrollState()
         Box(modifier = Modifier.fillMaxWidth().horizontalScroll(scroll)) {
             Text(
                 text = highlighted,
-                modifier = Modifier.padding(horizontal = 10.dp, vertical = 2.dp),
-                style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+                modifier = Modifier.padding(12.dp),
+                style = MaterialTheme.typography.bodySmall.copy(
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 12.sp,
+                    lineHeight = 18.sp,
+                ),
                 softWrap = false,
-                color = MaterialTheme.colorScheme.onSurface,
+                color = inkCodeText(inkDark),
             )
         }
     }
@@ -578,13 +621,16 @@ private fun MarkdownCodeBlock(block: ChatMarkdownBlock.Code) {
 /** Above this size the block falls back to plain text so streaming stays smooth. */
 private const val CODE_HIGHLIGHT_LIMIT = 20_000
 
-private val CodeComment = Color(0xFF8A8F98)
-private val CodeKeywordLight = Color(0xFF1F5FBF)
-private val CodeKeywordDark = Color(0xFF79B8FF)
-private val CodeStringLight = Color(0xFF2E7D4F)
-private val CodeStringDark = Color(0xFF6FD79A)
-private val CodeNumberLight = Color(0xFF9A6700)
-private val CodeNumberDark = Color(0xFFE3B341)
+// HStudio --ink-code-* palette (app.css): keyword purple, string teal,
+// number amber, comment slate — identical roles to our token groups.
+private val CodeCommentLight = Color(0xFF6B7280)
+private val CodeCommentDark = Color(0xFF94A3B8)
+private val CodeKeywordLight = Color(0xFF7C3AED)
+private val CodeKeywordDark = Color(0xFFC084FC)
+private val CodeStringLight = Color(0xFF0F766E)
+private val CodeStringDark = Color(0xFF5EEAD4)
+private val CodeNumberLight = Color(0xFFB45309)
+private val CodeNumberDark = Color(0xFFFBBF24)
 
 /**
  * A single combined scan (one regex pass, named groups) instead of one sweep
@@ -605,7 +651,7 @@ private fun highlightCode(text: String, dark: Boolean): AnnotatedString {
         append(text)
         for (match in CodeToken.findAll(text)) {
             val style = when {
-                match.groups["comment"] != null -> SpanStyle(color = CodeComment, fontStyle = FontStyle.Italic)
+                match.groups["comment"] != null -> SpanStyle(color = if (dark) CodeCommentDark else CodeCommentLight, fontStyle = FontStyle.Italic)
                 match.groups["string"] != null -> SpanStyle(color = if (dark) CodeStringDark else CodeStringLight)
                 match.groups["keyword"] != null -> SpanStyle(
                     color = if (dark) CodeKeywordDark else CodeKeywordLight,
@@ -704,7 +750,7 @@ private fun RowScope.TableCell(cell: String, align: TextAlign, weight: Float, he
             cell,
             linkColor = MaterialTheme.colorScheme.primary,
             codeBackground = inkCodeBg(MaterialTheme.colorScheme.isInkDark()),
-            codeColor = inkAccent(MaterialTheme.colorScheme.isInkDark()),
+            codeColor = inkTextPrimary(MaterialTheme.colorScheme.isInkDark()),
         ),
         modifier = Modifier.weight(weight).padding(horizontal = 8.dp, vertical = 7.dp),
         style = style.copy(textDirection = chatTextDirection(cell)),
