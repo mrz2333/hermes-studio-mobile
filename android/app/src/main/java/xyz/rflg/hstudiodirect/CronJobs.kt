@@ -178,6 +178,7 @@ private fun CronJobCard(
             title = stringResource(R.string.cron_delete_title, job.name),
             body = stringResource(R.string.cron_delete_body),
             action = stringResource(R.string.action_delete),
+            danger = true,
             onConfirm = onDelete,
             onDismiss = { confirmDelete = false },
         )

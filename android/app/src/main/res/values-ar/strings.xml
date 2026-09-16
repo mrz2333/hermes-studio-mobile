@@ -58,6 +58,10 @@
     <string name="login_submitting">جارٍ الاتصال…</string>
     <string name="login_use_different_account">استخدام حساب آخر</string>
     <string name="login_note">بيانات الدخول تُحفظ مشفرة على هذا الجهاز، ولا تُرسل إلا إلى العنوان أعلاه.</string>
+    <string name="banner_title">وكلاؤك معك دائمًا.</string>
+    <string name="banner_description">قم بتوصيل المحادثات ومسارات العمل والأجهزة للحفاظ على تدفق الاستكشاف والإبداع.</string>
+    <string name="login_welcome">مرحبًا بك مرة أخرى واستمر في مساحة العمل الخاصة بك.</string>
+    <string name="login_remember">تذكر كلمة مرور الحساب</string>
 
     <!-- قائمة المحادثات -->
     <string name="chats_title">المحادثات</string>

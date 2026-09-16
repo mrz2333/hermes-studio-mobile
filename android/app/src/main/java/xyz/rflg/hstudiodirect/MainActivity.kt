@@ -21,10 +21,13 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -37,6 +40,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -51,8 +55,11 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
@@ -101,7 +108,6 @@ import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.DarkMode
-import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Edit
@@ -169,11 +175,16 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.onSizeChanged
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalClipboardManager
@@ -182,6 +193,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.core.content.FileProvider
 import java.io.File
 import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
@@ -195,6 +207,8 @@ import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -344,136 +358,430 @@ private fun AppContent(state: UiState, viewModel: AppViewModel) {
 
 // ── login ────────────────────────────────────────────────────────────────
 
-@OptIn(ExperimentalMaterial3Api::class)
+/**
+ * Sign-in rebuilt on the HStudio App's `pages/login`: a gradient `.login-banner`
+ * (brand tile + kicker, banner title/description, language and theme actions)
+ * behind a rounded `.login-content` sheet that pulls up 18dp over it and holds
+ * `.field-shell` inputs, the `.remember-check` option, and a `.primary-button`.
+ *
+ * Two deliberate deltas from the cloud App: the server-address field stays (the
+ * direct-connection design needs it) and the OAuth row is dropped (there is no
+ * hosted endpoint to talk to).
+ */
 @Composable
 private fun LoginScreen(state: UiState, viewModel: AppViewModel) {
+    val dark = MaterialTheme.colorScheme.isInkDark()
     var url by rememberSaveable { mutableStateOf(state.baseUrl.ifBlank { BuildConfig.DEFAULT_STUDIO_URL }) }
-    var username by rememberSaveable { mutableStateOf("") }
-    var password by rememberSaveable { mutableStateOf("") }
+    var username by rememberSaveable { mutableStateOf(state.savedUsername) }
+    // rememberSaveable would persist a typed password into the plain-text
+    // system saved-state bundle; the encrypted Store is the only disk it gets.
+    var password by remember { mutableStateOf(state.savedPassword) }
+    var rememberAccount by rememberSaveable { mutableStateOf(state.rememberCredentials) }
+    var passwordVisible by remember { mutableStateOf(false) }
 
-    Scaffold(
-        topBar = {
-            StudioTopBar(
-                title = stringResource(R.string.app_name),
-                actions = {
-                    LanguageAction(state, viewModel)
-                    ThemeToggle(state, viewModel)
-                },
-            )
-        },
-    ) { padding ->
+    Column(
+        Modifier
+            .fillMaxSize()
+            .background(if (dark) Color(0xFF20282D) else Color(0xFFDFE8EB))
+            .imePadding(),
+    ) {
+        LoginBanner(state, viewModel, dark)
+
         Column(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
+                .fillMaxWidth()
+                .weight(1f)
+                .offset(y = (-18).dp)
+                .clip(RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp))
+                .background(inkLoginBg(dark))
+                .navigationBarsPadding()
                 .verticalScroll(rememberScrollState())
-                .imePadding()
-                .padding(horizontal = 20.dp, vertical = 24.dp),
-            verticalArrangement = Arrangement.Center,
+                .padding(horizontal = 20.dp)
+                .padding(top = 22.dp, bottom = 42.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            BrandMark()
-            Spacer(Modifier.height(12.dp))
-            Text(stringResource(R.string.app_name), style = MaterialTheme.typography.titleLarge)
-            Spacer(Modifier.height(3.dp))
-            Text(
-                stringResource(R.string.login_title),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-            )
-            Spacer(Modifier.height(18.dp))
-            StudioGroupedCard {
-                Column(
-                    modifier = Modifier.fillMaxWidth().padding(14.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    OutlinedTextField(
-                        value = url,
-                        onValueChange = { url = it },
-                        label = { Text(stringResource(R.string.login_server_label)) },
-                        placeholder = { Text(stringResource(R.string.login_server_hint)) },
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    OutlinedTextField(
-                        value = username,
-                        onValueChange = { username = it },
-                        label = { Text(stringResource(R.string.login_username)) },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    OutlinedTextField(
-                        value = password,
-                        onValueChange = { password = it },
-                        label = { Text(stringResource(R.string.login_password)) },
-                        singleLine = true,
-                        visualTransformation = PasswordVisualTransformation(),
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    Button(
-                        onClick = { viewModel.login(url, username, password) },
-                        enabled = !state.busy,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text(stringResource(if (state.busy) R.string.login_submitting else R.string.login_submit))
-                    }
-                }
-            }
-            state.error?.let {
-                Spacer(Modifier.height(10.dp))
-                ErrorNote(it) { viewModel.dismissError() }
-            }
-            if (state.instances.isNotEmpty()) {
-                Spacer(Modifier.height(16.dp))
+            Column(Modifier.widthIn(max = 375.dp).fillMaxWidth()) {
+                // .auth-title + .auth-description
                 Text(
-                    stringResource(R.string.instances_saved),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    stringResource(R.string.login_title),
+                    fontSize = 18.sp,
+                    lineHeight = 26.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = inkTextPrimary(dark),
                 )
-                Spacer(Modifier.height(6.dp))
-                StudioGroupedCard {
-                    state.instances.forEachIndexed { index, item ->
-                        InstanceRow(
-                            item = item,
-                            active = item.url.trimEnd('/') == state.baseUrl.trimEnd('/'),
-                            onSwitch = { viewModel.switchInstance(item.url) },
-                        )
-                        if (index < state.instances.lastIndex) {
-                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                Spacer(Modifier.height(3.dp))
+                Text(
+                    stringResource(R.string.login_welcome),
+                    fontSize = 11.sp,
+                    lineHeight = 17.sp,
+                    color = inkTextMuted(dark),
+                )
+                Spacer(Modifier.height(16.dp))
+
+                LoginField(
+                    label = stringResource(R.string.login_server_label),
+                    value = url,
+                    onValueChange = { url = it },
+                    placeholder = stringResource(R.string.login_server_hint),
+                    icon = Icons.Filled.Dns,
+                    keyboardType = KeyboardType.Uri,
+                )
+                Spacer(Modifier.height(12.dp))
+                LoginField(
+                    label = stringResource(R.string.login_username),
+                    value = username,
+                    onValueChange = { username = it },
+                    placeholder = stringResource(R.string.login_username),
+                    icon = Icons.Filled.Person,
+                )
+                Spacer(Modifier.height(12.dp))
+                LoginField(
+                    label = stringResource(R.string.login_password),
+                    value = password,
+                    onValueChange = { password = it },
+                    placeholder = stringResource(R.string.login_password),
+                    icon = Icons.Filled.Lock,
+                    imeAction = ImeAction.Done,
+                    keyboardActions = KeyboardActions(
+                        onDone = { if (!state.busy) viewModel.login(url, username, password, rememberAccount) },
+                    ),
+                    visualTransformation =
+                        if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                    trailing = {
+                        Box(
+                            modifier = Modifier
+                                .size(28.dp)
+                                .clip(CircleShape)
+                                .clickable { passwordVisible = !passwordVisible },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                if (passwordVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                                tint = inkTextMuted(dark),
+                            )
+                        }
+                    },
+                )
+                Spacer(Modifier.height(12.dp))
+                RememberCheck(
+                    label = stringResource(R.string.login_remember),
+                    checked = rememberAccount,
+                    onToggle = { rememberAccount = it },
+                )
+                Spacer(Modifier.height(16.dp))
+                LoginPrimaryButton(
+                    busy = state.busy,
+                    label = stringResource(R.string.login_submit),
+                    busyLabel = stringResource(R.string.login_submitting),
+                    onSubmit = { viewModel.login(url, username, password, rememberAccount) },
+                )
+
+                state.error?.let {
+                    Spacer(Modifier.height(10.dp))
+                    ErrorNote(it) { viewModel.dismissError() }
+                }
+                if (state.instances.isNotEmpty()) {
+                    Spacer(Modifier.height(16.dp))
+                    Text(
+                        stringResource(R.string.instances_saved),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    StudioGroupedCard {
+                        state.instances.forEachIndexed { index, item ->
+                            InstanceRow(
+                                item = item,
+                                active = item.url.trimEnd('/') == state.baseUrl.trimEnd('/'),
+                                onSwitch = { viewModel.switchInstance(item.url) },
+                            )
+                            if (index < state.instances.lastIndex) {
+                                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                            }
                         }
                     }
                 }
+                Spacer(Modifier.height(14.dp))
+                Text(
+                    stringResource(R.string.login_note),
+                    fontSize = 10.sp,
+                    lineHeight = 14.sp,
+                    color = inkTextMuted(dark),
+                )
             }
-            Spacer(Modifier.height(12.dp))
+        }
+    }
+}
+
+/**
+ * `.login-banner` — the base wash is the diagonal linear-gradient; the App
+ * layers two radial glows over it (blue top-end, warm bottom-end).
+ */
+@Composable
+private fun LoginBanner(state: UiState, viewModel: AppViewModel, dark: Boolean) {
+    var bannerSize by remember { mutableStateOf(androidx.compose.ui.unit.IntSize.Zero) }
+    val blue = if (dark) Color(0x33568EC4) else Color(0x3869A7ED)     // rgba(86,142,196,.2) / (105,167,237,.22)
+    val warm = if (dark) Color(0x14C26965) else Color(0x19F0817A)     // rgba(194,105,101,.08) / (240,129,122,.1)
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 182.dp)
+            .onSizeChanged { bannerSize = it }
+            .background(Brush.linearGradient(listOf(inkBannerStart(dark), inkBannerMid(dark), inkBannerEnd(dark)))),
+    ) {
+        if (bannerSize.width > 0 && bannerSize.height > 0) {
+            val w = bannerSize.width.toFloat()
+            val h = bannerSize.height.toFloat()
+            Box(
+                Modifier
+                    .matchParentSize()
+                    .background(
+                        Brush.radialGradient(
+                            colors = listOf(blue, Color.Transparent),
+                            center = Offset(w * 0.86f, h * 0.22f),
+                            radius = w * 0.27f,
+                        ),
+                    ),
+            )
+            Box(
+                Modifier
+                    .matchParentSize()
+                    .background(
+                        Brush.radialGradient(
+                            colors = listOf(warm, Color.Transparent),
+                            center = Offset(w, h * 0.72f),
+                            radius = w * 0.24f,
+                        ),
+                    ),
+            )
+        }
+        Column(
+            Modifier
+                .statusBarsPadding()
+                .padding(start = 20.dp, end = 20.dp, top = 18.dp, bottom = 18.dp),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                // .banner-logo — 38dp white tile with a hairline rim.
+                Box(Modifier.size(38.dp)) {
+                    AppMark(size = 38.dp, corner = 8.dp)
+                    Box(
+                        Modifier
+                            .matchParentSize()
+                            .clip(RoundedCornerShape(8.dp))
+                            .border(
+                                1.dp,
+                                if (dark) Color(0x1FFFFFFF) else Color(0x14202428),
+                                RoundedCornerShape(8.dp),
+                            ),
+                    )
+                }
+                Spacer(Modifier.width(10.dp))
+                Column {
+                    Text(
+                        "Hermes Studio",
+                        fontSize = 13.sp,
+                        lineHeight = 19.sp,
+                        color = inkBannerTitle(dark),
+                    )
+                    Text(
+                        "AGENT WORKSPACE",
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 7.sp,
+                        letterSpacing = 1.35.sp,
+                        color = inkBannerKicker(dark),
+                    )
+                }
+                Spacer(Modifier.weight(1f))
+                // .banner-actions
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    LanguageAction(state, viewModel)
+                    ThemeToggle(state, viewModel)
+                }
+            }
+            Spacer(Modifier.height(20.dp))
+            // .banner-copy — the title is a fixed art colour, not an ink token.
             Text(
-                stringResource(R.string.login_note),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
+                stringResource(R.string.banner_title),
+                fontSize = 21.sp,
+                lineHeight = 29.sp,
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = (-0.4).sp,
+                color = inkBannerTitle(dark),
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                stringResource(R.string.banner_description),
+                fontSize = 10.sp,
+                lineHeight = 15.sp,
+                color = inkBannerBody(dark),
             )
         }
     }
 }
 
-/** HStudio 品牌标记：品牌绿圆角块 + 白色字母。 */
+/**
+ * A `.field-group`: `.field-label` over a 42dp `.field-shell` — leading glyph,
+ * borderless [BasicTextField], optional trailing control. Focus swaps the
+ * hairline to `--ink-accent` and paints the 3px `--ink-focus-ring` halo.
+ */
 @Composable
-private fun BrandMark(size: Dp = 56.dp) {
+private fun LoginField(
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+    placeholder: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    keyboardType: KeyboardType = KeyboardType.Text,
+    imeAction: ImeAction = ImeAction.Next,
+    keyboardActions: KeyboardActions = KeyboardActions.Default,
+    visualTransformation: VisualTransformation = VisualTransformation.None,
+    trailing: (@Composable () -> Unit)? = null,
+) {
+    val dark = MaterialTheme.colorScheme.isInkDark()
+    var focused by remember { mutableStateOf(false) }
+    val shellShape = RoundedCornerShape(7.dp)
+    Text(
+        label,
+        fontSize = 11.sp,
+        fontWeight = FontWeight.Medium,
+        color = inkTextSecondary(dark),
+        modifier = Modifier.padding(bottom = 6.dp),
+    )
     Box(
         modifier = Modifier
-            .size(size)
-            .clip(RoundedCornerShape(16.dp))
-            .background(MaterialTheme.colorScheme.primary),
+            .fillMaxWidth()
+            .then(
+                if (focused) {
+                    Modifier.background(inkFocusRing(dark), RoundedCornerShape(10.dp)).padding(3.dp)
+                } else {
+                    Modifier
+                },
+            ),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(42.dp)
+                .clip(shellShape)
+                .background(inkInputBg(dark))
+                .border(1.dp, if (focused) inkAccent(dark) else inkBorder(dark), shellShape)
+                .onFocusChanged { focused = it.hasFocus }
+                .padding(horizontal = 11.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp), tint = inkTextMuted(dark))
+            Spacer(Modifier.width(8.dp))
+            Box(Modifier.weight(1f)) {
+                BasicTextField(
+                    value = value,
+                    onValueChange = onValueChange,
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    textStyle = TextStyle(fontSize = 13.sp, color = inkTextPrimary(dark)),
+                    cursorBrush = SolidColor(inkAccent(dark)),
+                    keyboardOptions = KeyboardOptions(keyboardType = keyboardType, imeAction = imeAction),
+                    keyboardActions = keyboardActions,
+                    visualTransformation = visualTransformation,
+                )
+                if (value.isEmpty()) {
+                    Text(
+                        placeholder,
+                        fontSize = 13.sp,
+                        color = inkTextMuted(dark),
+                        modifier = Modifier.align(Alignment.CenterStart),
+                    )
+                }
+            }
+            trailing?.let { it() }
+        }
+    }
+}
+
+/** `.remember-check` + `.remember-label`. */
+@Composable
+private fun RememberCheck(label: String, checked: Boolean, onToggle: (Boolean) -> Unit) {
+    val dark = MaterialTheme.colorScheme.isInkDark()
+    Row(
+        modifier = Modifier.fillMaxWidth().clickable { onToggle(!checked) },
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(17.dp)
+                .clip(RoundedCornerShape(4.dp))
+                .background(if (checked) inkAccent(dark) else Color.Transparent)
+                .border(
+                    1.dp,
+                    if (checked) inkAccent(dark) else inkBorder(dark),
+                    RoundedCornerShape(4.dp),
+                ),
+            contentAlignment = Alignment.Center,
+        ) {
+            if (checked) {
+                Icon(
+                    Icons.Filled.Check,
+                    contentDescription = null,
+                    modifier = Modifier.size(13.dp),
+                    tint = inkOnAccent(dark),
+                )
+            }
+        }
+        Spacer(Modifier.width(8.dp))
+        Text(label, fontSize = 12.sp, color = inkTextSecondary(dark))
+    }
+}
+
+/** `.primary-button` — 42dp, radius 7, `--ink-accent` on `--ink-on-accent`. */
+@Composable
+private fun LoginPrimaryButton(
+    busy: Boolean,
+    label: String,
+    busyLabel: String,
+    onSubmit: () -> Unit,
+) {
+    val dark = MaterialTheme.colorScheme.isInkDark()
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(42.dp)
+            .clip(RoundedCornerShape(7.dp))
+            .background(inkAccent(dark))
+            .alpha(if (busy) 0.64f else if (pressed) 0.88f else 1f)
+            .clickable(
+                interactionSource = interaction,
+                indication = null,
+                enabled = !busy,
+            ) { onSubmit() },
         contentAlignment = Alignment.Center,
     ) {
-        Text(
-            "HS",
-            color = MaterialTheme.colorScheme.onPrimary,
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
-        )
+        if (busy) {
+            // .button-loading: 16px spinner, border-2 currentColor.
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(16.dp),
+                    color = inkOnAccent(dark),
+                    strokeWidth = 2.dp,
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    busyLabel,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = inkOnAccent(dark),
+                )
+            }
+        } else {
+            Text(
+                label,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Medium,
+                color = inkOnAccent(dark),
+            )
+        }
     }
 }
 
@@ -536,8 +844,8 @@ private fun ChatsScreen(state: UiState, viewModel: AppViewModel) {
         onConfirm = { viewModel.createSessionCategory(it); newCategory = false }, onDismiss = { newCategory = false },
     )
     editCategory?.let { category -> TextPromptDialog(title = stringResource(R.string.session_category_edit), initial = category.name, hint = category.name, action = stringResource(R.string.action_save), onConfirm = { viewModel.renameSessionCategory(category, it); editCategory = null }, onDismiss = { editCategory = null }) }
-    deleteCategory?.let { category -> ConfirmDialog(title = stringResource(R.string.action_delete), body = category.name, action = stringResource(R.string.action_delete), onConfirm = { viewModel.deleteSessionCategory(category); deleteCategory = null }, onDismiss = { deleteCategory = null }) }
-    if (deleteVisible) ConfirmDialog(title = stringResource(R.string.session_batch_delete), body = stringResource(R.string.session_batch_delete_body, visibleSessions.size), action = stringResource(R.string.action_delete), onConfirm = { viewModel.batchDeleteVisibleSessions(); deleteVisible = false }, onDismiss = { deleteVisible = false })
+    deleteCategory?.let { category -> ConfirmDialog(title = stringResource(R.string.action_delete), body = category.name, action = stringResource(R.string.action_delete), danger = true, onConfirm = { viewModel.deleteSessionCategory(category); deleteCategory = null }, onDismiss = { deleteCategory = null }) }
+    if (deleteVisible) ConfirmDialog(title = stringResource(R.string.session_batch_delete), body = stringResource(R.string.session_batch_delete_body, visibleSessions.size), action = stringResource(R.string.action_delete), danger = true, onConfirm = { viewModel.batchDeleteVisibleSessions(); deleteVisible = false }, onDismiss = { deleteVisible = false })
     workspaceFor?.let { session -> TextPromptDialog(title = stringResource(R.string.session_workspace), initial = session.workspace.orEmpty(), hint = "/workspace", action = stringResource(R.string.action_save), onConfirm = { viewModel.setSessionWorkspace(session, it); workspaceFor = null }, onDismiss = { workspaceFor = null }) }
     rename?.let { session ->
         TextPromptDialog(
@@ -554,6 +862,7 @@ private fun ChatsScreen(state: UiState, viewModel: AppViewModel) {
             title = stringResource(R.string.chats_delete_title),
             body = stringResource(R.string.chats_delete_body),
             action = stringResource(R.string.action_delete),
+            danger = true,
             onConfirm = { viewModel.deleteSession(session) },
             onDismiss = { confirmDelete = null },
         )
@@ -665,6 +974,7 @@ private fun InstancesScreen(state: UiState, viewModel: AppViewModel) {
             title = stringResource(R.string.action_delete),
             body = stringResource(R.string.instances_delete_body),
             action = stringResource(R.string.action_delete),
+            danger = true,
             onConfirm = { viewModel.removeInstance(target.url); confirmRemove = null },
             onDismiss = { confirmRemove = null },
         )
@@ -996,6 +1306,7 @@ private fun GroupsScreen(state: UiState, viewModel: AppViewModel) {
             title = stringResource(R.string.groups_delete_title),
             body = stringResource(R.string.groups_delete_body),
             action = stringResource(R.string.action_delete),
+            danger = true,
             onConfirm = { viewModel.deleteRoom(room) },
             onDismiss = { confirmDelete = null },
         )
@@ -2032,6 +2343,7 @@ private fun ProfilesScreen(state: UiState, viewModel: AppViewModel) {
             title = stringResource(R.string.profiles_delete_title, profile.name),
             body = stringResource(R.string.profiles_delete_body),
             action = stringResource(R.string.action_delete),
+            danger = true,
             onConfirm = { viewModel.deleteProfile(profile.name) },
             onDismiss = { confirmDelete = null },
         )
@@ -3082,7 +3394,15 @@ private fun ManageSheet(
     }
 }
 
-/** Stands between a stray tap and something that cannot be undone. */
+/**
+ * Stands between a stray tap and something that cannot be undone.
+ *
+ * Styled as the App's `.app-confirm-*`: a blurred-feel 40% scrim that dismisses
+ * on tap, and a 360dp card (`--ink-bg-card`, 1px `--ink-border`, radius 14,
+ * `--ink-shadow-lg`) with a 15sp title, 11sp muted body and a right-aligned
+ * action row of 34dp pill-less buttons. [danger] moves the confirm button onto
+ * `--ink-error` the way `.app-confirm-button--danger` does.
+ */
 @Composable
 internal fun ConfirmDialog(
     title: String,
@@ -3090,23 +3410,112 @@ internal fun ConfirmDialog(
     action: String,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
+    danger: Boolean = false,
 ) {
-    AlertDialog(
+    val dark = MaterialTheme.colorScheme.isInkDark()
+    Dialog(
         onDismissRequest = onDismiss,
-        title = { Text(title) },
-        text = { Text(body) },
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    onDismiss()
-                    onConfirm()
-                },
-            ) { Text(action) }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
-        },
-    )
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color(0x66000000))
+                .clickable(
+                    interactionSource = null,
+                    indication = null,
+                ) { onDismiss() },
+            contentAlignment = Alignment.Center,
+        ) {
+            Column(
+                modifier = Modifier
+                    .widthIn(max = 360.dp)
+                    .fillMaxWidth()
+                    .padding(16.dp)
+                    .shadow(24.dp, RoundedCornerShape(14.dp), ambientColor = inkShadowLg(dark), spotColor = inkShadowLg(dark))
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(inkCardBg(dark))
+                    .border(1.dp, inkBorder(dark), RoundedCornerShape(14.dp))
+                    .padding(18.dp),
+            ) {
+                Text(
+                    title,
+                    fontSize = 15.sp,
+                    lineHeight = 21.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = inkTextPrimary(dark),
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    body,
+                    fontSize = 11.sp,
+                    lineHeight = 17.sp,
+                    color = inkTextMuted(dark),
+                )
+                Spacer(Modifier.height(16.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    AppConfirmButton(
+                        label = stringResource(R.string.action_cancel),
+                        primary = false,
+                        onClick = onDismiss,
+                    )
+                    AppConfirmButton(
+                        label = action,
+                        primary = true,
+                        danger = danger,
+                        onClick = {
+                            onDismiss()
+                            onConfirm()
+                        },
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** `.app-confirm-button`: 34dp tall, radius 7, `opacity .72` while pressed. */
+@Composable
+private fun AppConfirmButton(
+    label: String,
+    primary: Boolean,
+    danger: Boolean = false,
+    onClick: () -> Unit,
+) {
+    val dark = MaterialTheme.colorScheme.isInkDark()
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val background = when {
+        primary && danger -> inkError(dark)
+        primary -> inkAccent(dark)
+        else -> inkPressed(dark)
+    }
+    val foreground = when {
+        primary && danger -> Color.White
+        primary -> inkOnAccent(dark)
+        else -> inkTextSecondary(dark)
+    }
+    Box(
+        modifier = Modifier
+            .height(34.dp)
+            .widthIn(min = 64.dp)
+            .clip(RoundedCornerShape(7.dp))
+            .background(background)
+            .alpha(if (pressed) 0.72f else 1f)
+            .clickable(
+                interactionSource = interaction,
+                indication = null,
+                onClick = onClick,
+            )
+            .padding(horizontal = 14.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(label, fontSize = 12.sp, fontWeight = FontWeight.Medium, color = foreground)
+    }
 }
 
 /**

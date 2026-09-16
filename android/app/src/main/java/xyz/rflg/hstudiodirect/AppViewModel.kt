@@ -132,6 +132,10 @@ data class UiState(
     val appearance: String = "dark",
     /** Saved Studio deployments, newest first. The active one is [baseUrl]. */
     val instances: List<StudioInstance> = emptyList(),
+    /** .remember-check: an account and password kept on this device for the login form. */
+    val rememberCredentials: Boolean = false,
+    val savedUsername: String = "",
+    val savedPassword: String = "",
     val sessionModel: String? = null,
     val sessionProvider: String? = null,
     val contextTokens: Long = 0,
@@ -285,6 +289,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             language = store.language,
             appearance = store.appearance,
             instances = store.instances,
+            rememberCredentials = store.rememberCredentials,
+            savedUsername = store.savedUsername,
+            savedPassword = store.savedPassword,
         ),
     )
     val state: StateFlow<UiState> = _state.asStateFlow()
@@ -368,7 +375,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         restoreSession()
     }
 
-    fun login(baseUrl: String, username: String, password: String) {
+    fun login(baseUrl: String, username: String, password: String, remember: Boolean = false) {
         val normalized = normalizeUrl(baseUrl)
         if (normalized == null) {
             _state.update { it.copy(error = str(R.string.error_server_address)) }
@@ -385,6 +392,16 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 val token = api.login(username.trim(), password)
                 store.baseUrl = normalized
                 store.token = token
+                // .remember-check only persists after a successful sign-in, so a
+                // typo never saves a broken password.
+                store.rememberCredentials = remember
+                if (remember) {
+                    store.savedUsername = username.trim()
+                    store.savedPassword = password
+                } else {
+                    store.savedUsername = ""
+                    store.savedPassword = ""
+                }
                 store.instances = upsertInstance(
                     store.instances,
                     StudioInstance(
@@ -3199,6 +3216,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 language = store.language,
                 appearance = store.appearance,
                 instances = store.instances,
+                rememberCredentials = store.rememberCredentials,
+                savedUsername = store.savedUsername,
+                savedPassword = store.savedPassword,
             )
         }
     }

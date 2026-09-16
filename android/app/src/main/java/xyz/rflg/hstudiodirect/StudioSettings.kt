@@ -281,6 +281,7 @@ internal fun ManagedUsersSettings(state: UiState, viewModel: AppViewModel) {
             title = stringResource(R.string.users_delete_title, user.username),
             body = stringResource(R.string.users_delete_note),
             action = stringResource(R.string.action_delete),
+            danger = true,
             onConfirm = { viewModel.deleteManagedUser(user) },
             onDismiss = { deleting = null },
         )

@@ -59,6 +59,10 @@
     <string name="login_submitting">Connecting…</string>
     <string name="login_use_different_account">Use a different account</string>
     <string name="login_note">Credentials are stored encrypted on this device and sent only to the address above.</string>
+    <string name="banner_title">Your agents, always with you.</string>
+    <string name="banner_description">Connect conversations, workflows, and devices—so ideas keep moving.</string>
+    <string name="login_welcome">Welcome back. Continue to your workspace.</string>
+    <string name="login_remember">Remember account password</string>
 
     <!-- Conversation list -->
     <string name="chats_title">Chats</string>

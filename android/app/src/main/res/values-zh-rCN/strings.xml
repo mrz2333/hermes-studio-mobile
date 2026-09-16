@@ -49,6 +49,10 @@
     <string name="login_submitting">正在连接…</string>
     <string name="login_use_different_account">使用其他账号</string>
     <string name="login_note">凭据在本设备加密存储，仅发送到上述地址。</string>
+    <string name="banner_title">你的智能体，随时都在。</string>
+    <string name="banner_description">连接对话、工作流与设备，让探索和创造保持流动。</string>
+    <string name="login_welcome">欢迎回来，继续进入你的工作空间。</string>
+    <string name="login_remember">记住账号密码</string>
     <string name="chats_title">聊天</string>
     <string name="chats_tab">聊天</string>
     <string name="chats_all_profiles">所有配置文件</string>

@@ -80,8 +80,31 @@ class Store(context: Context) {
         get() = prefs.getString(KEY_REASONING, "").orEmpty()
         set(value) = prefs.edit().putString(KEY_REASONING, value).apply()
 
+    /** .remember-check on the App's login form: keep the account on this device. */
+    var rememberCredentials: Boolean
+        get() = prefs.getBoolean(KEY_REMEMBER, false)
+        set(value) = prefs.edit().putBoolean(KEY_REMEMBER, value).apply()
+
+    var savedUsername: String
+        get() = prefs.getString(KEY_SAVED_USER, "").orEmpty()
+        set(value) = prefs.edit().putString(KEY_SAVED_USER, value).apply()
+
+    var savedPassword: String
+        get() = prefs.getString(KEY_SAVED_PASSWORD, "").orEmpty()
+        set(value) = prefs.edit().putString(KEY_SAVED_PASSWORD, value).apply()
+
     fun clearCredentials() {
-        prefs.edit().remove(KEY_TOKEN).apply()
+        // A remembered account survives sign-out — that is the whole point of
+        // the checkbox — but everything else goes.
+        if (rememberCredentials) {
+            prefs.edit().remove(KEY_TOKEN).apply()
+        } else {
+            prefs.edit()
+                .remove(KEY_TOKEN)
+                .remove(KEY_SAVED_USER)
+                .remove(KEY_SAVED_PASSWORD)
+                .apply()
+        }
     }
 
     val isConfigured: Boolean
@@ -99,5 +122,8 @@ class Store(context: Context) {
         const val KEY_ONBOARDED = "onboarded"
         const val KEY_LANGUAGE = "language"
         const val KEY_APPEARANCE = "appearance"
+        const val KEY_REMEMBER = "remember_credentials"
+        const val KEY_SAVED_USER = "saved_username"
+        const val KEY_SAVED_PASSWORD = "saved_password"
     }
 }

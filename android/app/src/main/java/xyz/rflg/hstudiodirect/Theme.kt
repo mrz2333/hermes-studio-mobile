@@ -221,15 +221,55 @@ fun inkPressed(dark: Boolean): Color =
 fun inkCodeText(dark: Boolean): Color =
     if (dark) Color(0xFFE5E7EB) else Color(0xFF1F2937)
 
-/** --ink-file-card-*: official App dark tokens are real (#202121 / #2d2f2e / #181919). */
+/** --ink-file-card-bg / --ink-file-card-border: official App dark tokens are real (#202121 / #2d2f2e). */
 fun inkFileCardBg(dark: Boolean): Color =
     if (dark) Color(0xFF202121) else Color(0xFFE5E7EA)
 
 fun inkFileCardBorder(dark: Boolean): Color =
     if (dark) Color(0xFF2D2F2E) else Color(0xFFD1D5DA)
 
+/** --ink-file-card-icon-bg: glyph disc on file cards and attachment chips. */
 fun inkFileCardIconBg(dark: Boolean): Color =
     if (dark) Color(0xFF181919) else Color(0xFFF8F9FA)
+
+/**
+ * --ink-focus-ring: 3px ring behind a focused `.field-shell`
+ * (login.css). Light rgba(51,51,51,.1), dark rgba(255,255,255,.12).
+ */
+fun inkFocusRing(dark: Boolean): Color =
+    if (dark) Color(0x1FFFFFFF) else Color(0x1A333333)
+
+/** --ink-shadow-lg ambient for elevated cards (.app-confirm-card). */
+fun inkShadowLg(dark: Boolean): Color =
+    if (dark) Color(0x4D000000) else Color(0x17000000)   // .3 / .09 black
+
+/** --ink-login-bg: the sheet that holds the auth forms. */
+fun inkLoginBg(dark: Boolean): Color =
+    if (dark) Color(0xFF181919) else Color.White
+
+/**
+ * .login-banner base wash — the App layers two radial glows over a diagonal
+ * gradient (light #f4f3ef→#e8eceb→#dde8ed, dark #292d2e→#242a2c→#202b32);
+ * these three stops are drawn as a Brush.
+ */
+fun inkBannerStart(dark: Boolean): Color =
+    if (dark) Color(0xFF292D2E) else Color(0xFFF4F3EF)
+
+fun inkBannerMid(dark: Boolean): Color =
+    if (dark) Color(0xFF242A2C) else Color(0xFFE8ECEB)
+
+fun inkBannerEnd(dark: Boolean): Color =
+    if (dark) Color(0xFF202B32) else Color(0xFFDDE8ED)
+
+/** Banner type colours are fixed art, not ink tokens (#202428 / #f0f1ee). */
+fun inkBannerTitle(dark: Boolean): Color =
+    if (dark) Color(0xFFF0F1EE) else Color(0xFF202428)
+
+fun inkBannerBody(dark: Boolean): Color =
+    if (dark) Color(0xFFADB5B9) else Color(0xFF657078)
+
+fun inkBannerKicker(dark: Boolean): Color =
+    if (dark) Color(0xFFA0A8AC) else Color(0xFF6D777D)
 
 /** Studio shows a short clock for today and a date for older rows. */
 fun formatStamp(raw: String?): String {
