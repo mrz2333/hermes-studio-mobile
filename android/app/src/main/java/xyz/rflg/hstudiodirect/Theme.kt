@@ -290,20 +290,3 @@ fun formatStamp(raw: String?): String {
     val today = android.text.format.DateFormat.format("yyyy-MM-dd", System.currentTimeMillis()).toString()
     return if (date == today && time.isNotBlank()) time else date
 }
-
-/**
- * HStudio ink-token colors that sit outside Material 3's tokens.
- *
- * These mirror the custom CSS variables from HStudio's app.css (ink-* family)
- * so code blocks, tables, and tool cards can match the official client pixel-for-pixel.
- */
-@Composable
-fun inkCodeBg(dark: Boolean): Color = if (dark) Color(0xFF131414) else Color(0xFFF4F4F4)
-@Composable
-fun inkMessageBg(dark: Boolean): Color = if (dark) Color(0xFF262828) else Color(0xFFF1F1F1)
-@Composable
-fun inkCardHover(dark: Boolean): Color = if (dark) Color(0xFF222323) else Color(0xFFFAFAFA)
-@Composable
-fun inkInputBorder(dark: Boolean): Color = if (dark) Color(0x29FFFFFF) else Color(0x2E333333)
-@Composable
-fun inkSelectedBg(dark: Boolean): Color = if (dark) Color(0x2EFFFFFF) else Color(0x1A333333)

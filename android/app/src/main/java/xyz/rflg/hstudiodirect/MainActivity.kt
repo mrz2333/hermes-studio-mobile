@@ -185,7 +185,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.onSizeChanged
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalClipboardManager
@@ -1122,12 +1122,7 @@ private fun SessionRow(
     isActive: Boolean,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
-    isActive: Boolean = false,
 ) {
-    val dark = isSystemInDarkTheme()
-    val cardHoverBg = inkCardHover(dark)
-    val inputBorder = inkInputBorder(dark)
-    val selectedBg = inkSelectedBg(dark)
     val running = session.running
     // HStudio .session-item--active (App app-service CSS): background
     // --ink-bg-secondary + .session-title font-weight 550. The active flag is
@@ -1139,9 +1134,8 @@ private fun SessionRow(
             .fillMaxWidth()
             .background(if (isActive) inkSecondaryBg(inkDark) else Color.Unspecified)
             .combinedClickable(onClick = onClick, onLongClick = onLongClick)
-            .padding(horizontal = 14.dp, vertical = 10.dp)
-            .background(if (isActive) selectedBg else Color.Transparent),
-        verticalArrangement = Arrangement.spacedBy(11.dp),
+            .padding(horizontal = 13.dp, vertical = 11.dp),
+        verticalArrangement = Arrangement.spacedBy(3.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             ProfileAvatar(
