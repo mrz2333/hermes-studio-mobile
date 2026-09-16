@@ -16,6 +16,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
@@ -169,6 +170,7 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -1629,14 +1631,10 @@ private fun MessageBubble(
             modifier = Modifier.fillMaxWidth(if (isUser) 0.88f else if (hasWideContent) 1f else 0.80f),
             horizontalAlignment = if (isUser) Alignment.End else Alignment.Start,
         ) {
-            // HStudio message-author: display:flex, margin:0 0 4px 2px, gap:4px
-            line.sender?.takeIf { !isUser }?.let {
-                Text(
-                    it,
-                    modifier = Modifier.padding(start = 2.dp, bottom = 4.dp),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+            // HStudio message-author: display:flex, min-height:22px, margin:0 0 4px 2px, gap:4px.
+            // The agent name renders as an .agent-badge pill, not bare text.
+            line.sender?.takeIf { !isUser }?.let { sender ->
+                InkAgentBadge(sender, modifier = Modifier.padding(start = 2.dp, bottom = 4.dp))
             }
 
             // HStudio message-bubble: padding:10px 14px, border-radius:10px
@@ -1674,8 +1672,8 @@ private fun MessageBubble(
                 Text(
                     stamp,
                     modifier = Modifier.padding(top = 4.dp, start = 4.dp, end = 4.dp),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                    color = inkTextMuted(inkDark),
                 )
             }
         }
@@ -1689,22 +1687,34 @@ private fun quoteForReply(quoted: String, reply: String): String {
 
 @Composable
 private fun ChatFileCard(file: ChatFileLink, onDownload: () -> Unit) {
+    // HStudio --ink-file-card-*: #e5e7ea fill + #d1d5da hairline in light;
+    // dark falls back to the ink card-hover surface with a white hairline.
+    val inkDark = MaterialTheme.colorScheme.isInkDark()
     Surface(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onDownload),
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        color = inkFileCardBg(inkDark),
         shape = RoundedCornerShape(10.dp),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        border = BorderStroke(1.dp, inkFileCardBorder(inkDark)),
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 9.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(9.dp),
         ) {
-            Icon(
-                Icons.AutoMirrored.Filled.InsertDriveFile,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-            )
+            Box(
+                modifier = Modifier
+                    .size(30.dp)
+                    .clip(RoundedCornerShape(7.dp))
+                    .background(inkCardBg(inkDark)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    Icons.AutoMirrored.Filled.InsertDriveFile,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+            }
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(
                     file.label,
@@ -1715,7 +1725,7 @@ private fun ChatFileCard(file: ChatFileLink, onDownload: () -> Unit) {
                 Text(
                     file.fileName,
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = inkTextSecondary(inkDark),
                 )
             }
         }
@@ -1769,12 +1779,20 @@ private fun ThinkingTimeline(line: ChatLine) {
             }
             Spacer(Modifier.weight(1f))
             if (hasDetails) {
+                // HStudio .tool-chevron: transition transform 0.15s ease. A
+                // vertical chevron (up↔down) rather than a directional one,
+                // so it reads the same in RTL and needs no auto-mirror.
+                val chevronDeg by animateFloatAsState(
+                    targetValue = if (expanded) 0f else 180f,
+                    animationSpec = tween(150),
+                    label = "thinkingChevron",
+                )
                 Icon(
-                    if (expanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
+                    Icons.Filled.KeyboardArrowUp,
                     contentDescription = stringResource(
                         if (expanded) R.string.thinking_collapse else R.string.thinking_expand,
                     ),
-                    modifier = Modifier.size(18.dp),
+                    modifier = Modifier.size(18.dp).rotate(chevronDeg),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
@@ -1786,20 +1804,57 @@ private fun ThinkingTimeline(line: ChatLine) {
             ) {
                 line.tools.forEach { tool -> ToolStepRow(tool, nowMillis) }
                 line.reasoning?.takeIf { it.isNotBlank() }?.let { reasoning ->
+                    // HStudio .tool-detail-reasoning: max-height 300px, scrolls
+                    // internally; 1px $border-light hairline; rgba(text,.035)
+                    // fill; $text-secondary 12sp text.
+                    val inkDark = MaterialTheme.colorScheme.isInkDark()
+                    val reasoningScroll = rememberScrollState()
                     Surface(
-                        color = MaterialTheme.colorScheme.surface,
-                        shape = RoundedCornerShape(9.dp),
+                        modifier = Modifier.fillMaxWidth().heightIn(max = 300.dp),
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.035f),
+                        shape = RoundedCornerShape(7.dp),
+                        border = BorderStroke(1.dp, inkBorderLight(inkDark)),
                     ) {
                         Text(
                             reasoning,
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(horizontal = 9.dp, vertical = 8.dp),
+                            color = inkTextSecondary(inkDark),
+                            modifier = Modifier
+                                .verticalScroll(reasoningScroll)
+                                .padding(horizontal = 10.dp, vertical = 8.dp),
                         )
                     }
                 }
             }
         }
+    }
+}
+
+/**
+ * HStudio .agent-badge: inline-flex pill, min-height 18px, padding 1px 6px,
+ * --ink-bg-secondary fill, --ink-text-secondary text, 8sp/600. Used for the
+ * message-author line above AI bubbles.
+ */
+@Composable
+private fun InkAgentBadge(label: String, modifier: Modifier = Modifier) {
+    val inkDark = MaterialTheme.colorScheme.isInkDark()
+    Surface(
+        modifier = modifier.heightIn(min = 18.dp),
+        color = inkSecondaryBg(inkDark),
+        contentColor = inkTextSecondary(inkDark),
+        shape = RoundedCornerShape(999.dp),
+    ) {
+        Text(
+            label,
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp),
+            style = MaterialTheme.typography.labelSmall.copy(
+                fontSize = 8.sp,
+                lineHeight = 14.sp,
+                fontWeight = FontWeight.SemiBold,
+            ),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 
@@ -2184,11 +2239,12 @@ private fun Composer(
     }
 
     if (!composerExpanded && draft.isBlank() && state.attachments.isEmpty() && !state.recording && !state.transcribing) {
+        val inkDarkCollapsed = MaterialTheme.colorScheme.isInkDark()
         Surface(
             modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 12.dp, vertical = 6.dp),
             shape = RoundedCornerShape(10.dp),
-            color = MaterialTheme.colorScheme.surfaceContainerHigh,
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+            color = inkInputBg(inkDarkCollapsed),
+            border = BorderStroke(1.dp, inkInputBorder(inkDarkCollapsed)),
             tonalElevation = 0.dp,
             shadowElevation = 0.dp,
         ) {
@@ -2203,7 +2259,7 @@ private fun Composer(
                 Text(
                     stringResource(R.string.composer_hint),
                     modifier = Modifier.weight(1f).clickable { composerExpanded = true }.padding(vertical = 10.dp),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = inkTextMuted(inkDarkCollapsed),
                 )
                 ComposerActionButton(state, draft, onSend, viewModel) {
                     askMic.launch(Manifest.permission.RECORD_AUDIO)

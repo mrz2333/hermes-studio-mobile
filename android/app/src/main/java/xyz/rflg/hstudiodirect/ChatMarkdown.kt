@@ -6,9 +6,12 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -290,8 +293,9 @@ internal fun chatMarkdownInline(
     source: String,
     linkColor: Color = Color.Unspecified,
     codeBackground: Color = Color.Transparent,
+    codeColor: Color = Color.Unspecified,
 ): AnnotatedString = buildAnnotatedString {
-    appendMarkdown(source, 0, source.length, linkColor, codeBackground)
+    appendMarkdown(source, 0, source.length, linkColor, codeBackground, codeColor)
 }
 
 /** Trailing punctuation that belongs to the sentence, not to the URL. */
@@ -311,6 +315,7 @@ private fun AnnotatedString.Builder.appendMarkdown(
     end: Int,
     linkColor: Color,
     codeBackground: Color,
+    codeColor: Color = Color.Unspecified,
 ) {
     var index = start
     while (index < end) {
@@ -325,7 +330,7 @@ private fun AnnotatedString.Builder.appendMarkdown(
                 val close = source.indexOf(delimiter, index + 2).takeIf { it in (index + 2)..<end }
                 if (close != null) {
                     pushStyle(SpanStyle(fontWeight = FontWeight.Bold))
-                    appendMarkdown(source, index + 2, close, linkColor, codeBackground)
+                    appendMarkdown(source, index + 2, close, linkColor, codeBackground, codeColor)
                     pop()
                     index = close + 2
                 } else {
@@ -337,7 +342,7 @@ private fun AnnotatedString.Builder.appendMarkdown(
                 val close = source.indexOf("~~", index + 2).takeIf { it in (index + 2)..<end }
                 if (close != null) {
                     pushStyle(SpanStyle(textDecoration = TextDecoration.LineThrough))
-                    appendMarkdown(source, index + 2, close, linkColor, codeBackground)
+                    appendMarkdown(source, index + 2, close, linkColor, codeBackground, codeColor)
                     pop()
                     index = close + 2
                 } else {
@@ -348,7 +353,7 @@ private fun AnnotatedString.Builder.appendMarkdown(
             char == '`' -> {
                 val close = source.indexOf('`', index + 1).takeIf { it in (index + 1)..<end }
                 if (close != null) {
-                    pushStyle(SpanStyle(fontFamily = FontFamily.Monospace, background = codeBackground))
+                    pushStyle(SpanStyle(fontFamily = FontFamily.Monospace, background = codeBackground, color = codeColor))
                     append(source.substring(index + 1, close))
                     pop()
                     index = close + 1
@@ -367,7 +372,7 @@ private fun AnnotatedString.Builder.appendMarkdown(
                     val url = source.substring(urlStart + 1, urlEnd)
                     pushLink(LinkAnnotation.Url(url))
                     pushStyle(SpanStyle(color = linkColor, textDecoration = TextDecoration.Underline))
-                    appendMarkdown(source, index + 1, labelEnd, linkColor, codeBackground)
+                    appendMarkdown(source, index + 1, labelEnd, linkColor, codeBackground, codeColor)
                     pop()
                     pop()
                     index = urlEnd + 1
@@ -392,7 +397,7 @@ private fun AnnotatedString.Builder.appendMarkdown(
                 val close = source.indexOf(delimiter, index + 1).takeIf { it in (index + 1)..<end }
                 if (close != null) {
                     pushStyle(SpanStyle(fontStyle = FontStyle.Italic))
-                    appendMarkdown(source, index + 1, close, linkColor, codeBackground)
+                    appendMarkdown(source, index + 1, close, linkColor, codeBackground, codeColor)
                     pop()
                     index = close + 1
                 } else {
@@ -451,14 +456,7 @@ internal fun ChatMarkdownText(text: String, modifier: Modifier = Modifier) {
                     MarkdownListRow(block.marker, block.text, block.indent, subtleMarker = false)
                 is ChatMarkdownBlock.Task ->
                     MarkdownTaskRow(block)
-                is ChatMarkdownBlock.Quote -> MarkdownLine(
-                    block.text,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.055f))
-                        .padding(horizontal = 10.dp, vertical = 7.dp),
-                )
+                is ChatMarkdownBlock.Quote -> MarkdownQuoteRow(block.text)
                 is ChatMarkdownBlock.Code -> MarkdownCodeBlock(block)
                 is ChatMarkdownBlock.Table -> MarkdownTable(block)
                 ChatMarkdownBlock.Rule -> HorizontalDivider(
@@ -481,11 +479,14 @@ private fun MarkdownLine(
     softWrap: Boolean = true,
 ) {
     val direction = chatTextDirection(text)
+    val inkDark = MaterialTheme.colorScheme.isInkDark()
     Text(
         text = chatMarkdownInline(
             text,
             linkColor = MaterialTheme.colorScheme.primary,
-            codeBackground = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f),
+            // HStudio `code:not(.hljs)`: --ink-bg-code fill, $accent-primary text.
+            codeBackground = inkCodeBg(inkDark),
+            codeColor = inkAccent(inkDark),
         ),
         modifier = modifier.fillMaxWidth(),
         style = style.copy(
@@ -497,6 +498,46 @@ private fun MarkdownLine(
         overflow = if (softWrap) TextOverflow.Clip else TextOverflow.Visible,
         textAlign = if (direction == TextDirection.Rtl) TextAlign.Right else TextAlign.Left,
     )
+}
+
+/**
+ * HStudio blockquote: `padding: 4px 12px`, `border-inline-start: 3px solid
+ * $border-color`, `color: $text-secondary`. A start-anchored hairline bar,
+ * not a filled chip. The Row lays children out in reading order, so under
+ * RTL the bar mirrors to the trailing edge on its own.
+ */
+@Composable
+private fun MarkdownQuoteRow(text: String) {
+    val inkDark = MaterialTheme.colorScheme.isInkDark()
+    val direction = chatTextDirection(text)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(IntrinsicSize.Min),
+    ) {
+        Box(
+            modifier = Modifier
+                .width(3.dp)
+                .fillMaxHeight()
+                .background(inkBorder(inkDark)),
+        )
+        Text(
+            text = chatMarkdownInline(
+                text,
+                linkColor = MaterialTheme.colorScheme.primary,
+                codeBackground = inkCodeBg(inkDark),
+                codeColor = inkAccent(inkDark),
+            ),
+            modifier = Modifier
+                .weight(1f)
+                .padding(start = 12.dp, end = 12.dp, top = 4.dp, bottom = 4.dp),
+            style = MaterialTheme.typography.bodyLarge.copy(
+                textDirection = direction,
+                color = inkTextSecondary(inkDark),
+            ),
+            textAlign = if (direction == TextDirection.Rtl) TextAlign.Right else TextAlign.Left,
+        )
+    }
 }
 
 /** Fenced code keeps its own line breaks and scrolls sideways instead of wrapping. */
@@ -662,7 +703,8 @@ private fun RowScope.TableCell(cell: String, align: TextAlign, weight: Float, he
         text = chatMarkdownInline(
             cell,
             linkColor = MaterialTheme.colorScheme.primary,
-            codeBackground = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f),
+            codeBackground = inkCodeBg(MaterialTheme.colorScheme.isInkDark()),
+            codeColor = inkAccent(MaterialTheme.colorScheme.isInkDark()),
         ),
         modifier = Modifier.weight(weight).padding(horizontal = 8.dp, vertical = 7.dp),
         style = style.copy(textDirection = chatTextDirection(cell)),

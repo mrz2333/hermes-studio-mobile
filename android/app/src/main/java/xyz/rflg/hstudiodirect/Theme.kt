@@ -193,6 +193,29 @@ fun inkError(dark: Boolean): Color =
 fun inkCardBg(dark: Boolean): Color =
     if (dark) Color(0xFF181919) else Color.White
 
+/** --ink-border / SCSS $border-color: blockquote bar, generic hairlines. */
+fun inkBorder(dark: Boolean): Color =
+    if (dark) Color(0xFF383A39) else Color(0xFFE0E0E0)
+
+/** --ink-border-light / SCSS $border-light: soft panel hairlines. */
+fun inkBorderLight(dark: Boolean): Color =
+    if (dark) Color(0xFF2D2F2E) else Color(0xFFEBEBEB)
+
+/** --ink-text-secondary / SCSS $text-secondary: sender labels, quotes. */
+fun inkTextSecondary(dark: Boolean): Color =
+    if (dark) Color(0xFFB8BAB8) else Color(0xFF666666)
+
+/** --ink-bg-secondary: agent badge fill (light #f0f0f0, dark --UI-BG-1). */
+fun inkSecondaryBg(dark: Boolean): Color =
+    if (dark) Color(0xFF1F1F1F) else Color(0xFFF0F0F0)
+
+/** --ink-file-card-bg / hover / border (light only; dark Studio falls back to inkCardHover). */
+fun inkFileCardBg(dark: Boolean): Color =
+    if (dark) Color(0xFF222323) else Color(0xFFE5E7EA)
+
+fun inkFileCardBorder(dark: Boolean): Color =
+    if (dark) Color(0x29FFFFFF) else Color(0xFFD1D5DA)
+
 /** Studio shows a short clock for today and a date for older rows. */
 fun formatStamp(raw: String?): String {
     if (raw.isNullOrBlank()) return ""
