@@ -2269,29 +2269,35 @@ private fun Composer(
         return
     }
 
+    // HStudio ChatInput.vue `.input-wrapper`: $bg-card fill, 1px
+    // --input-border-color hairline, 18px radius, 0 8px 28px rgba(0,0,0,.08)
+    // shadow that deepens on focus-within.
+    val inkDark = MaterialTheme.colorScheme.isInkDark()
     Surface(
         modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 8.dp, vertical = 7.dp),
-        shape = RoundedCornerShape(14.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+        shape = RoundedCornerShape(18.dp),
+        color = inkCardBg(inkDark),
+        border = BorderStroke(
+            1.dp,
+            if (fieldFocused) MaterialTheme.colorScheme.primary.copy(alpha = 0.5f) else inkInputBorder(inkDark),
+        ),
         tonalElevation = 0.dp,
-        shadowElevation = 0.dp,
+        shadowElevation = 8.dp,
     ) {
     Column(modifier = Modifier.fillMaxWidth().padding(top = 6.dp)) {
         if (state.attachments.isNotEmpty() || state.attaching) {
+            // `.attachment-previews`: wrap, gap 8px, 10px bottom pad.
             FlowRow(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 state.attachments.forEach { file ->
-                    AssistChip(
-                        onClick = { viewModel.removeAttachment(file) },
-                        label = { Text(file.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                        trailingIcon = { Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.action_remove)) },
-                    )
+                    InkAttachmentChip(file.name) { viewModel.removeAttachment(file) }
                 }
-                if (state.attaching) AssistChip(onClick = {}, label = { Text(stringResource(R.string.composer_uploading)) })
+                if (state.attaching) InkAttachmentBusyChip()
             }
+            Spacer(Modifier.height(10.dp))
         }
 
         if (state.recording || state.transcribing) {
@@ -2536,31 +2542,138 @@ private fun ToolbarChip(
     label: String,
     onClick: () -> Unit,
 ) {
+    // HStudio ChatInput.vue `.input-model-button` / `.input-settings-button`:
+    // $text-secondary, 999px pill, max-width 190px, no border/ripple.
+    val inkDark = MaterialTheme.colorScheme.isInkDark()
     Row(
         modifier = Modifier
-            .clip(RoundedCornerShape(14.dp))
+            .clip(RoundedCornerShape(999.dp))
+            .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.04f))
             .clickable(onClick = onClick)
             .padding(horizontal = 8.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(5.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         Icon(
             icon,
             contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            tint = inkTextSecondary(inkDark),
             modifier = Modifier.size(15.dp),
         )
         Text(
             label,
             style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = inkTextSecondary(inkDark),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.widthIn(max = 150.dp),
         )
-        Text("⌄", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Icon(
+            Icons.Filled.KeyboardArrowDown,
+            contentDescription = null,
+            tint = inkTextSecondary(inkDark),
+            modifier = Modifier.size(15.dp),
+        )
     }
 }
+
+/**
+ * HStudio ChatInput.vue `.attachment-preview`: $bg-secondary fill, 1px
+ * $border-color hairline, $radius-sm (6px). `.attachment-file` stacks a glyph
+ * over an 11sp $text-secondary name inside 80–140dp; images become a 112×72
+ * contain thumb. The remove button is `.attachment-remove` (18px dark disc,
+ * always half-visible on touch devices via the `@media (hover: none)` rule).
+ */
+@Composable
+private fun InkAttachmentChip(name: String, onRemove: () -> Unit) {
+    val inkDark = MaterialTheme.colorScheme.isInkDark()
+    val isImage = name.substringAfterLast('.', "").lowercase() in IMAGE_FILE_EXTENSIONS
+    Box {
+        Surface(
+            modifier = Modifier
+                .widthIn(min = 80.dp, max = if (isImage) 112.dp else 140.dp),
+            color = inkSecondaryBg(inkDark),
+            shape = RoundedCornerShape(6.dp),
+            border = BorderStroke(1.dp, inkBorder(inkDark)),
+        ) {
+            if (isImage) {
+                Box(
+                    modifier = Modifier.size(width = 112.dp, height = 72.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        Icons.Filled.Image,
+                        contentDescription = null,
+                        modifier = Modifier.size(26.dp),
+                        tint = inkTextSecondary(inkDark),
+                    )
+                }
+            } else {
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                ) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.InsertDriveFile,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                        tint = inkTextSecondary(inkDark),
+                    )
+                    Text(
+                        name,
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                        color = inkTextSecondary(inkDark),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.widthIn(max = 116.dp),
+                    )
+                }
+            }
+        }
+        Surface(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(2.dp)
+                .size(18.dp)
+                .clickable(onClick = onRemove),
+            shape = CircleShape,
+            color = Color(0x80000000),
+            contentColor = Color.White,
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(Icons.Filled.Close, stringResource(R.string.action_remove), modifier = Modifier.size(12.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun InkAttachmentBusyChip() {
+    val inkDark = MaterialTheme.colorScheme.isInkDark()
+    Surface(
+        modifier = Modifier.widthIn(min = 80.dp),
+        color = inkSecondaryBg(inkDark),
+        shape = RoundedCornerShape(6.dp),
+        border = BorderStroke(1.dp, inkBorder(inkDark)),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 14.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            CircularProgressIndicator(modifier = Modifier.size(13.dp), strokeWidth = 2.dp)
+            Text(
+                stringResource(R.string.composer_uploading),
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                color = inkTextSecondary(inkDark),
+                maxLines = 1,
+            )
+        }
+    }
+}
+
+private val IMAGE_FILE_EXTENSIONS = setOf("png", "jpg", "jpeg", "gif", "webp", "bmp", "heic", "heif", "avif")
 
 /** The "+" sheet: attachments first, then the per-conversation controls. */
 @Composable
