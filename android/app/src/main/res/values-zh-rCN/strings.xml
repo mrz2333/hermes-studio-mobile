@@ -739,7 +739,7 @@
     <string name="files_new_folder">新建文件夹</string>
     <string name="files_edit">查看或编辑</string>
     <string name="files_open_external">用外部应用打开</string>
-    <string name="files_saved">文件已保存</string>
+    <string name="files_saved">文件已保存</string><string name="files_empty">此文件夹为空</string><string name="files_directory">目录</string><string name="files_file">文件</string><string name="files_more_actions">更多操作</string>
     <string name="logs_title">日志</string>
     <string name="logs_hub_note">Studio、桥接与智能体诊断</string>
     <string name="connections_title">连接</string>

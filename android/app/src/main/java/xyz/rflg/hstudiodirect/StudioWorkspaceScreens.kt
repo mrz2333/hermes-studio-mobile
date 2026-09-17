@@ -3,6 +3,8 @@ package xyz.rflg.hstudiodirect
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -21,7 +23,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.Image
 import androidx.compose.ui.graphics.asImageBitmap
 import android.graphics.Bitmap
@@ -45,7 +51,62 @@ import com.google.zxing.qrcode.QRCodeWriter
     copy?.let { file -> SimpleNameDialog(stringResource(R.string.files_copy_to), file.path, { copy = null }) { copy = null; vm.copyStudioFile(file, it) } }
     manage?.let { file -> AlertDialog(onDismissRequest = { manage = null }, title = { Text(file.name) }, text = { Column { TextButton(onClick = { manage = null; vm.openStudioFile(file) }) { Text(stringResource(R.string.files_edit)) }; TextButton(onClick = { rename = file; manage = null }) { Text(stringResource(R.string.action_rename)) }; TextButton(onClick = { copy = file; manage = null }) { Text(stringResource(R.string.files_copy_to)) }; TextButton(onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(vm.studioFileUrl(file)))); manage = null }) { Text(stringResource(R.string.files_download)) }; TextButton(onClick = { vm.deleteStudioFile(file); manage = null }) { Text(stringResource(R.string.action_delete)) } } }, confirmButton = {}) }
     state.openFile?.let { file -> var content by remember(file.path, state.openFileContent) { mutableStateOf(state.openFileContent) }; AlertDialog(onDismissRequest = vm::closeStudioFile, title = { Text(file.name) }, text = { OutlinedTextField(content, { content = it }, Modifier.fillMaxWidth(), minLines = 12, textStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace)) }, confirmButton = { TextButton(onClick = { vm.saveStudioFile(content) }) { Text(stringResource(R.string.action_save)) } }, dismissButton = { TextButton(onClick = vm::closeStudioFile) { Text(stringResource(R.string.action_cancel)) } }) }
-    Scaffold(topBar = { TopAppBar(title = { Text(stringResource(R.string.files_title)) }, navigationIcon = { IconButton(onClick = { if (state.filesPath.isBlank()) vm.back() else vm.openFiles(state.filesPath.substringBeforeLast('/', "")) }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.action_back)) } }, actions = { IconButton(onClick = { upload.launch("*/*") }) { Icon(Icons.Filled.Upload, stringResource(R.string.files_upload)) }; IconButton(onClick = { folderDialog = true }) { Icon(Icons.Filled.CreateNewFolder, stringResource(R.string.files_new_folder)) }; IconButton(onClick = { vm.openFiles(state.filesPath) }) { Icon(Icons.Filled.Refresh, stringResource(R.string.action_refresh)) } }) }) { pad -> LazyColumn(Modifier.fillMaxSize().padding(pad), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) { item { Text("/" + state.filesPath, fontFamily = FontFamily.Monospace) }; items(state.studioFiles, key = { it.path }) { file -> Card(Modifier.fillMaxWidth().clickable { if (file.directory) vm.openFiles(file.path) else manage = file }, shape = RoundedCornerShape(16.dp)) { Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) { Icon(if (file.directory) Icons.Filled.Folder else Icons.AutoMirrored.Filled.InsertDriveFile, null); Spacer(Modifier.width(12.dp)); Column(Modifier.weight(1f)) { Text(file.name, fontWeight = FontWeight.Bold); if (!file.directory) Text("${file.size} B", style = MaterialTheme.typography.labelSmall) }; if (!file.directory) IconButton(onClick = { manage = file }) { Icon(Icons.Filled.MoreVert, null) } } } } } }
+    Scaffold(topBar = { TopAppBar(title = { Text(stringResource(R.string.files_title)) }, navigationIcon = { IconButton(onClick = { if (state.filesPath.isBlank()) vm.back() else vm.openFiles(state.filesPath.substringBeforeLast('/', "")) }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.action_back)) } }, actions = { IconButton(onClick = { upload.launch("*/*") }) { Icon(Icons.Filled.Upload, stringResource(R.string.files_upload)) }; IconButton(onClick = { folderDialog = true }) { Icon(Icons.Filled.CreateNewFolder, stringResource(R.string.files_new_folder)) }; IconButton(onClick = { vm.openFiles(state.filesPath) }) { Icon(Icons.Filled.Refresh, stringResource(R.string.action_refresh)) } }) }) { pad ->
+        LazyColumn(Modifier.fillMaxSize().padding(pad), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            item { FilesBreadcrumb(state.filesPath, vm) }
+            state.error?.let { error -> item { Text(error, color = MaterialTheme.colorScheme.error, modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) } }
+            if (state.studioFiles.isEmpty() && state.error == null) item { Text(stringResource(R.string.files_empty), modifier = Modifier.fillMaxWidth().padding(vertical = 40.dp), textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            items(state.studioFiles, key = { it.path }) { file ->
+                // HStudio workspace-file-row: min-height 48px, padding 5px 7px,
+                // gap 7px, radius 5px; icon 19px @0.82 opacity; name 13px/19px.
+                val rowShape = RoundedCornerShape(5.dp)
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 48.dp)
+                        .clip(rowShape)
+                        .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                        .clickable { if (file.directory) vm.openFiles(file.path) else manage = file }
+                        .padding(start = 10.dp, top = 5.dp, end = 7.dp, bottom = 5.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        if (file.directory) Icons.Filled.Folder else Icons.AutoMirrored.Filled.InsertDriveFile,
+                        contentDescription = if (file.directory) stringResource(R.string.files_directory) else stringResource(R.string.files_file),
+                        modifier = Modifier.size(19.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.82f),
+                    )
+                    Spacer(Modifier.width(7.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            file.name,
+                            fontSize = 13.sp,
+                            lineHeight = 19.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        if (!file.directory) Text(
+                            "${file.size} B",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    IconButton(onClick = { manage = file }) { Icon(Icons.Filled.MoreVert, stringResource(R.string.files_more_actions)) }
+                }
+            }
+        }
+    }
+}
+
+@Composable private fun FilesBreadcrumb(path: String, vm: AppViewModel) {
+    val parts = path.split('/').filter(String::isNotBlank)
+    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically) {
+        TextButton(onClick = { vm.openFiles("") }) { Text("/") }
+        parts.forEachIndexed { index, part ->
+            Text("/", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            TextButton(onClick = { vm.openFiles(parts.take(index + 1).joinToString("/")) }) { Text(part, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

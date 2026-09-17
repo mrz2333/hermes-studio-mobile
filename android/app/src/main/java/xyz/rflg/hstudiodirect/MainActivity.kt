@@ -189,6 +189,7 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.core.content.FileProvider
@@ -1677,9 +1678,9 @@ private fun ConversationScreen(state: UiState, viewModel: AppViewModel) {
                 LazyColumn(
                     state = listState,
                         modifier = Modifier.fillMaxSize(),
-                    // HStudio .message-list: padding 20px all around.
-                    contentPadding = PaddingValues(20.dp),
-                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                    // HStudio message-list uses a 20px outer gutter and 8px rhythm between messages.
+                    contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     items(state.lines) { line ->
                         MessageBubble(
@@ -1886,19 +1887,17 @@ private fun MessageBubble(
     )
     val hasWideContent = hasThinking || parsed.files.isNotEmpty()
 
-    // HStudio message-bubble: padding:10px 14px, border-radius:10px
-    // background: --ink-bg-message (#f1f1f1 light / #262828 dark)
-    // user messages use --ink-accent (#333 light / #eeeeeb dark) with
-    // --ink-on-accent text; the brand green stays reserved for links and status.
+    // HStudio .message-bubble: padding:10px 14px, border-radius:10px,
+    // background: var(--ink-bg-message) (#f1f1f1 light / #262828 dark).
+    // The only user-specific rule is `.message.user .message-bubble { max-width:
+    // 100% }`, so both roles share one surface and --ink-text-primary colour.
     val inkDark = MaterialTheme.colorScheme.isInkDark()
     val bubbleColor = when {
         line.isError -> inkErrorSoft(inkDark)
-        isUser -> inkAccent(inkDark)
         else -> inkMessageBg(inkDark)
     }
     val onBubble = when {
         line.isError -> inkError(inkDark)
-        isUser -> inkOnAccent(inkDark)
         else -> MaterialTheme.colorScheme.onSurface
     }
 
@@ -1913,9 +1912,13 @@ private fun MessageBubble(
             Spacer(Modifier.width(6.dp))
         }
 
-        // HStudio msg-body: fit-content, max-width:88% (user) / 80% (AI)
+        // HStudio msg-body (scope c0c550c3, main message list):
+        // .msg-body{max-width:100%;min-width:0} with .message.user/.assistant
+        // overrides max-width:100%/width:100% — bubbles shrink-to-fit inside a
+        // full-width column; the 75%/80% caps belong to the composer's
+        // reference-preview scope 8aca294f, not the message list.
         Column(
-            modifier = Modifier.fillMaxWidth(if (isUser) 0.88f else if (hasWideContent) 1f else 0.80f),
+            modifier = Modifier.fillMaxWidth(1f),
             horizontalAlignment = if (isUser) Alignment.End else Alignment.Start,
         ) {
             // HStudio message-author: display:flex, min-height:22px, margin:0 0 4px 2px, gap:4px.
@@ -1924,7 +1927,8 @@ private fun MessageBubble(
                 InkAgentBadge(sender, modifier = Modifier.padding(start = 2.dp, bottom = 4.dp))
             }
 
-            // HStudio message-bubble: padding:10px 14px, border-radius:10px
+            // HStudio .message-bubble: padding:10px 14px, border-radius:10px.
+            // Both roles draw on --ink-bg-message with --ink-text-primary text.
             Card(
                 modifier = Modifier.combinedClickable(
                     enabled = onActions != null,
@@ -2159,18 +2163,25 @@ private fun ThinkingTimeline(line: ChatLine) {
 @Composable
 private fun InkAgentBadge(label: String, modifier: Modifier = Modifier) {
     val inkDark = MaterialTheme.colorScheme.isInkDark()
+    // HStudio .agent-badge: 18px min-height, 1px 6px padding, 8px/14px type.
+    // Its @media (max-width:640px) override drops to 16px / 0 5px / 7px over
+    // 13px, which is the rule a phone-width layout resolves to.
+    val compact = LocalConfiguration.current.screenWidthDp <= 640
     Surface(
-        modifier = modifier.heightIn(min = 18.dp),
+        modifier = modifier.heightIn(min = if (compact) 16.dp else 18.dp),
         color = inkSecondaryBg(inkDark),
         contentColor = inkTextSecondary(inkDark),
         shape = RoundedCornerShape(999.dp),
     ) {
         Text(
             label,
-            modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp),
+            modifier = Modifier.padding(
+                horizontal = if (compact) 5.dp else 6.dp,
+                vertical = if (compact) 0.dp else 1.dp,
+            ),
             style = MaterialTheme.typography.labelSmall.copy(
-                fontSize = 8.sp,
-                lineHeight = 14.sp,
+                fontSize = if (compact) 7.sp else 8.sp,
+                lineHeight = if (compact) 13.sp else 14.sp,
                 fontWeight = FontWeight.SemiBold,
             ),
             maxLines = 1,
