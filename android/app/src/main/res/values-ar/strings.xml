@@ -104,6 +104,7 @@
     <string name="conversation_thinking">يفكر…</string>
     <string name="conversation_tool">ينفّذ %1$s…</string>
     <string name="thinking_title">يفكّر</string>
+    <string name="thinking_chars">%1$d حرفًا</string>
     <string name="thinking_expand">عرض تفاصيل التفكير</string>
     <string name="thinking_collapse">إخفاء تفاصيل التفكير</string>
     <string name="tool_status_done">اكتمل</string>

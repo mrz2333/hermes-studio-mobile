@@ -87,6 +87,7 @@
     <string name="conversation_thinking">思考中…</string>
     <string name="conversation_tool">正在运行 %1$s…</string>
     <string name="thinking_title">思考</string>
+    <string name="thinking_chars">%1$d 字</string>
     <string name="thinking_expand">显示思考详情</string>
     <string name="thinking_collapse">隐藏思考详情</string>
     <string name="tool_status_done">已完成</string>

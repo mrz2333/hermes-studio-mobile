@@ -105,6 +105,7 @@
     <string name="conversation_thinking">Thinking…</string>
     <string name="conversation_tool">Running %1$s…</string>
     <string name="thinking_title">Thinking</string>
+    <string name="thinking_chars">%1$d chars</string>
     <string name="thinking_expand">Show thinking details</string>
     <string name="thinking_collapse">Hide thinking details</string>
     <string name="tool_status_done">Completed</string>
