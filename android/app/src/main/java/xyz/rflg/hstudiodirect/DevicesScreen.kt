@@ -259,7 +259,7 @@ private data class DevicesMetrics(
     val titleLine: TextUnit,
     val descriptionSize: TextUnit,
     val descriptionLine: TextUnit,
-    val actionsGap: Dp,
+    val headerActionsGap: Dp,
     val triggerSize: Dp,
     val countHeight: Dp,
     val columns: Int,
@@ -300,7 +300,7 @@ private fun devicesMetrics(): DevicesMetrics {
             titleLine = 29.sp,
             descriptionSize = 12.sp,
             descriptionLine = 18.sp,
-            actionsGap = 9.dp,
+            headerActionsGap = 9.dp,
             triggerSize = 34.dp,
             countHeight = 24.dp,
             // grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)) — the
@@ -336,7 +336,7 @@ private fun devicesMetrics(): DevicesMetrics {
             titleLine = 24.sp,
             descriptionSize = 10.sp,
             descriptionLine = 14.sp,
-            actionsGap = 7.dp,
+            headerActionsGap = 7.dp,
             triggerSize = 30.dp,
             countHeight = 22.dp,
             columns = if (configuration.screenWidthDp <= 520) 1 else 2,
@@ -370,7 +370,7 @@ private fun devicesMetrics(): DevicesMetrics {
         titleLine = 29.sp,
         descriptionSize = 12.sp,
         descriptionLine = 18.sp,
-        actionsGap = 9.dp,
+        headerActionsGap = 9.dp,
         triggerSize = 34.dp,
         countHeight = 24.dp,
         columns = if (single) 1 else 2,
@@ -427,9 +427,9 @@ private fun DevicesHeader(
             // A back affordance the official page does not need: uni-app's page
             // stack owns it, whereas this screen is pushed inside one activity.
             verticalAlignment = Alignment.Top,
-            horizontalArrangement = Arrangement.spacedBy(metrics.actionsGap),
+            horizontalArrangement = Arrangement.spacedBy(metrics.headerActionsGap),
         ) {
-            DevicesBackButton(metrics, viewModel::back)
+            DevicesBackButton(metrics, onBack)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(metrics.headingGap)) {
                 Text(
                     stringResource(R.string.devices_title),
@@ -448,7 +448,7 @@ private fun DevicesHeader(
             }
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(metrics.actionsGap),
+                horizontalArrangement = Arrangement.spacedBy(metrics.headerActionsGap),
             ) {
                 if (count > 0) DeviceCount(count, metrics, dark)
                 AccountTrigger(metrics, dark, avatarInitial, onToggleMenu)
