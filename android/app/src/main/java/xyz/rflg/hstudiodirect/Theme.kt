@@ -175,7 +175,9 @@ fun inkCodeBg(dark: Boolean): Color =
 
 /** --ink-selected-bg: dots, focus rings and tinted chips — NOT row fills. */
 fun inkSelectedBg(dark: Boolean): Color =
-    if (dark) Color(0x1FFFFFFF) else Color(0x1A333333)
+    // Dark is rgba(255,255,255,.18) = 0x2E, deliberately *not* the .12 that
+    // --ink-focus-ring uses; the two are easy to conflate.
+    if (dark) Color(0x2EFFFFFF) else Color(0x1A333333)
 
 /** --ink-text-muted: timestamps and secondary chrome. */
 fun inkTextMuted(dark: Boolean): Color =

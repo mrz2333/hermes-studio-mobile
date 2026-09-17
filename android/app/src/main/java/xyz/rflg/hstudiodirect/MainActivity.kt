@@ -397,8 +397,10 @@ private fun LoginScreen(state: UiState, viewModel: AppViewModel) {
                 .background(inkLoginBg(dark))
                 .navigationBarsPadding()
                 .verticalScroll(rememberScrollState())
+                // phone block: padding: 22px 20px calc(14px + safe-area-bottom);
+                // navigationBarsPadding() above supplies the inset.
                 .padding(horizontal = 20.dp)
-                .padding(top = 22.dp, bottom = 42.dp),
+                .padding(top = 22.dp, bottom = 14.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Column(Modifier.widthIn(max = 375.dp).fillMaxWidth()) {
@@ -528,7 +530,7 @@ private fun LoginBanner(state: UiState, viewModel: AppViewModel, dark: Boolean) 
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(min = 182.dp)
+            .heightIn(min = 200.dp)
             .onSizeChanged { bannerSize = it }
             .background(Brush.linearGradient(listOf(inkBannerStart(dark), inkBannerMid(dark), inkBannerEnd(dark)))),
     ) {
@@ -561,7 +563,8 @@ private fun LoginBanner(state: UiState, viewModel: AppViewModel, dark: Boolean) 
         Column(
             Modifier
                 .statusBarsPadding()
-                .padding(start = 20.dp, end = 20.dp, top = 18.dp, bottom = 18.dp),
+                // phone block: padding: calc(16px + safe-area-top) 20px 36px
+                .padding(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 36.dp),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 // .banner-logo — 38dp white tile with a hairline rim.
@@ -602,22 +605,25 @@ private fun LoginBanner(state: UiState, viewModel: AppViewModel, dark: Boolean) 
                 }
             }
             Spacer(Modifier.height(20.dp))
-            // .banner-copy — the title is a fixed art colour, not an ink token.
-            Text(
-                stringResource(R.string.banner_title),
-                fontSize = 21.sp,
-                lineHeight = 29.sp,
-                fontWeight = FontWeight.SemiBold,
-                letterSpacing = (-0.4).sp,
-                color = inkBannerTitle(dark),
-            )
-            Spacer(Modifier.height(4.dp))
-            Text(
-                stringResource(R.string.banner_description),
-                fontSize = 10.sp,
-                lineHeight = 15.sp,
-                color = inkBannerBody(dark),
-            )
+            // .banner-copy — max-width:300px, margin-top:20px; the title is a
+            // fixed art colour, not an ink token.
+            Column(Modifier.widthIn(max = 300.dp)) {
+                Text(
+                    stringResource(R.string.banner_title),
+                    fontSize = 21.sp,
+                    lineHeight = 29.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    letterSpacing = (-0.4).sp,
+                    color = inkBannerTitle(dark),
+                )
+                Spacer(Modifier.height(5.dp))
+                Text(
+                    stringResource(R.string.banner_description),
+                    fontSize = 10.sp,
+                    lineHeight = 15.sp,
+                    color = inkBannerBody(dark),
+                )
+            }
         }
     }
 }
