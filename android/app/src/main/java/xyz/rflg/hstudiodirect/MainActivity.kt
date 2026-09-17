@@ -1799,6 +1799,11 @@ private fun ConversationScreen(state: UiState, viewModel: AppViewModel) {
     }
 }
 
+/**
+ * HStudio official App chat top bar: flat black/white navigation — back arrow,
+ * avatar + session title + runtime subtitle + live spinner, overflow menu.
+ * No gradient, no shadow, no elevation overkill. Just a clean divider at the bottom.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ConversationTopBar(state: UiState, profile: String, avatar: AvatarSpec?, viewModel: AppViewModel) {
@@ -1806,32 +1811,45 @@ private fun ConversationTopBar(state: UiState, profile: String, avatar: AvatarSp
     Column {
         TopAppBar(
             title = {
-                // HStudio's `navigation-title` + `navigation-title-spinner`: a flat
-                // title with a live spinner while the run is still streaming.
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
-                    ProfileAvatar(profile.ifBlank { "default" }, avatar, size = 26.dp)
+                    ProfileAvatar(profile.ifBlank { "default" }, avatar, size = 33.dp)
                     Column(modifier = Modifier.weight(1f, fill = false)) {
-                        Text(state.openSession?.title ?: stringResource(R.string.action_new_chat), maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleSmall)
                         Text(
-                            state.selectedRuntime.name,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            state.openSession?.title ?: stringResource(R.string.action_new_chat),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Medium,
                         )
-                    }
-                    if (state.sending) {
-                        CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        ) {
+                            Text(
+                                state.selectedRuntime.name,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            if (state.sending) {
+                                CircularProgressIndicator(modifier = Modifier.size(12.dp), strokeWidth = 2.dp)
+                            }
+                        }
                     }
                 }
             },
             navigationIcon = {
-                IconButton(onClick = { viewModel.back() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.action_back)) }
+                IconButton(onClick = { viewModel.back() }) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.action_back))
+                }
             },
             actions = {
                 Box {
-                    IconButton(onClick = { menuOpen = true }) { Icon(Icons.Filled.MoreVert, stringResource(R.string.message_actions)) }
+                    IconButton(onClick = { menuOpen = true }) {
+                        Icon(Icons.Filled.MoreVert, stringResource(R.string.message_actions))
+                    }
                     DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                         DropdownMenuItem(text = { Text(stringResource(R.string.action_refresh)) }, onClick = { menuOpen = false; viewModel.refreshConversation() })
                         DropdownMenuItem(text = { Text(stringResource(R.string.action_new_chat)) }, onClick = { menuOpen = false; viewModel.startNewConversation() })
@@ -1839,9 +1857,14 @@ private fun ConversationTopBar(state: UiState, profile: String, avatar: AvatarSp
                     }
                 }
             },
-            colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface),
+            colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = MaterialTheme.colorScheme.surface,
+                navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
+                titleContentColor = MaterialTheme.colorScheme.onSurface,
+                actionIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            ),
         )
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 0.5.dp)
     }
 }
 
@@ -2004,49 +2027,80 @@ private fun ThinkingTimeline(line: ChatLine) {
     val expanded = expandedOverride ?: line.streaming
     val nowMillis = timelineNow(line)
     val elapsed = line.startedAtMillis?.let { formatElapsed(nowMillis - it) }
+    val inkDark = MaterialTheme.colorScheme.isInkDark()
+    // Reasoning char count (from content only, excluding tool entries)
+    val reasoningLen = line.reasoning?.length ?: 0
 
-    Column(modifier = Modifier.fillMaxWidth()) {
+    Column(modifier = Modifier.fillMaxWidth().padding(top = 2.dp)) {
+        // ----------  clickable header row  ----------
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .then(
-                    if (hasDetails) Modifier.clickable { expandedOverride = !expanded }
+                    if (hasDetails) Modifier
+                        .clickable { expandedOverride = !expanded }
                     else Modifier,
                 )
-                .padding(vertical = 2.dp),
+                .padding(vertical = 3.dp, horizontal = 2.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
+            // Leading status indicator
             if (line.streaming) {
-                CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                CircularProgressIndicator(
+                    modifier = Modifier.size(14.dp),
+                    strokeWidth = 2.dp,
+                    color = inkTextMuted(inkDark),
+                )
             } else {
                 Icon(
                     Icons.Filled.Psychology,
                     contentDescription = null,
-                    modifier = Modifier.size(17.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(15.dp),
+                    tint = inkTextSecondary(inkDark),
                 )
             }
+            // "Thinking" label: bold when streaming, regular otherwise
             Text(
                 stringResource(R.string.thinking_title),
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold,
+                style = MaterialTheme.typography.bodySmall.copy(
+                    fontSize = 12.sp,
+                    lineHeight = 16.sp,
+                    fontWeight = if (line.streaming) FontWeight.SemiBold else FontWeight.Normal,
+                ),
+                color = inkTextSecondary(inkDark),
             )
-            elapsed?.let {
-                Text(
-                    it,
-                    style = MaterialTheme.typography.bodySmall.copy(
-                        fontFamily = FontFamily.Monospace,
-                        textDirection = TextDirection.Ltr,
-                    ),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+            // Time · chars metadata
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                elapsed?.let {
+                    Text("·", style = MaterialTheme.typography.labelSmall, color = inkTextMuted(inkDark))
+                    Text(
+                        it,
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontFamily = FontFamily.Monospace,
+                            textDirection = TextDirection.Ltr,
+                        ),
+                        color = inkTextMuted(inkDark),
+                    )
+                }
+                if (reasoningLen > 0) {
+                    Text("·", style = MaterialTheme.typography.labelSmall, color = inkTextMuted(inkDark))
+                    Text(
+                        stringResource(R.string.thinking_chars, reasoningLen),
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontFamily = FontFamily.Monospace,
+                            textDirection = TextDirection.Ltr,
+                        ),
+                        color = inkTextMuted(inkDark),
+                    )
+                }
             }
             Spacer(Modifier.weight(1f))
+            // Collapse/expand chevron
             if (hasDetails) {
-                // HStudio .tool-chevron: transition transform 0.15s ease. A
-                // vertical chevron (up↔down) rather than a directional one,
-                // so it reads the same in RTL and needs no auto-mirror.
                 val chevronDeg by animateFloatAsState(
                     targetValue = if (expanded) 0f else 180f,
                     animationSpec = tween(150),
@@ -2057,28 +2111,25 @@ private fun ThinkingTimeline(line: ChatLine) {
                     contentDescription = stringResource(
                         if (expanded) R.string.thinking_collapse else R.string.thinking_expand,
                     ),
-                    modifier = Modifier.size(18.dp).rotate(chevronDeg),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(16.dp).rotate(chevronDeg),
+                    tint = inkTextMuted(inkDark),
                 )
             }
         }
+
+        // ----------  expanded content  ----------
         if (expanded) {
             Column(
-                modifier = Modifier.padding(top = 7.dp),
+                modifier = Modifier.padding(top = 6.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 line.tools.forEach { tool -> ToolStepRow(tool, nowMillis) }
                 line.reasoning?.takeIf { it.isNotBlank() }?.let { reasoning ->
-                    // HStudio .tool-details (official App): --ink-bg-code fill,
-                    // 1px --ink-border hairline, radius 6px; the reasoning text
-                    // (.tool-detail-reasoning) is 12sp italic --ink-text-secondary
-                    // at .9 opacity. Height is capped so long chains scroll.
-                    val inkDark = MaterialTheme.colorScheme.isInkDark()
                     val reasoningScroll = rememberScrollState()
                     Surface(
                         modifier = Modifier.fillMaxWidth().heightIn(max = 300.dp),
                         color = inkCodeBg(inkDark),
-                        shape = RoundedCornerShape(6.dp),
+                        shape = RoundedCornerShape(7.dp),
                         border = BorderStroke(1.dp, inkBorder(inkDark)),
                     ) {
                         Text(
@@ -2619,20 +2670,27 @@ private fun Composer(
             )
         }
 
+        // ----------  composer toolbar row: profile · model · reasoning · context  ----------
         Row(
-            modifier = Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp, top = 2.dp, bottom = 8.dp),
+            modifier = Modifier.fillMaxWidth().padding(start = 10.dp, end = 8.dp, top = 4.dp, bottom = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            Surface(
-                modifier = Modifier.size(40.dp),
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.surfaceVariant,
+            // + button to open the attachment / options sheet
+            IconButton(
+                onClick = { sheet = ComposerSheet.Options },
+                enabled = !state.sending,
+                modifier = Modifier.size(36.dp),
             ) {
-                IconButton(onClick = { sheet = ComposerSheet.Options }, enabled = !state.sending) {
-                    Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.composer_more))
-                }
+                Icon(
+                    Icons.Filled.Add,
+                    contentDescription = stringResource(R.string.composer_more),
+                    tint = inkTextSecondary(inkDark),
+                    modifier = Modifier.size(22.dp),
+                )
             }
+
+            // Toolbar chips in a horizontal scroll
             Row(
                 modifier = Modifier.weight(1f).horizontalScroll(rememberScrollState()),
                 verticalAlignment = Alignment.CenterVertically,
@@ -2663,6 +2721,7 @@ private fun Composer(
                 }
                 ContextUsage(state)
             }
+            // Send / mic / stop action button
             ComposerActionButton(state, draft, onSend, viewModel) {
                 askMic.launch(Manifest.permission.RECORD_AUDIO)
             }
