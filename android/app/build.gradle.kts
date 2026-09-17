@@ -25,8 +25,8 @@ android {
         applicationId = "xyz.rflg.hstudiodirect"
         minSdk = 26
         targetSdk = 35
-        versionCode = 41
-        versionName = "1.9.1"
+        versionCode = 42
+        versionName = "1.9.2"
         buildConfigField("String", "BUILD_COMMIT", "\"$buildCommit\"")
         buildConfigField("String", "DEFAULT_STUDIO_URL", "\"$defaultStudioUrl\"")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
