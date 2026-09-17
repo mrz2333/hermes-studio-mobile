@@ -125,6 +125,7 @@ internal fun DevicesScreen(state: UiState, viewModel: AppViewModel) {
                     .firstOrNull()?.uppercase() ?: "S",
                 menuOpen = accountMenu,
                 onToggleMenu = { accountMenu = !accountMenu },
+                onBack = { viewModel.back() },
             )
 
             Box(Modifier.weight(1f)) {
@@ -408,6 +409,7 @@ private fun DevicesHeader(
     avatarInitial: String,
     menuOpen: Boolean,
     onToggleMenu: () -> Unit,
+    onBack: () -> Unit,
 ) {
     Column(
         modifier = Modifier
