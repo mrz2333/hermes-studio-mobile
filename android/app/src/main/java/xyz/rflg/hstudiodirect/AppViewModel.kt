@@ -22,7 +22,22 @@ enum class Screen {
     Loading, Onboarding, Login, Chats, Groups, AgentHub, Conversation, Room, Profiles,
     Settings, MoreSettings, SettingsGroup, Channels, Channel, CronJobs, CronJob, CronHistory,
     Kanban, KanbanTask, Skills, Skill, Plugins, Mcp, Pets, Insights, AgentRuntimes, Workflows, GlobalAgent, EkkoHub, Files, Logs, Connections, Journey, Webhooks, RuntimeVersions, Appearance,
-    Instances,
+    /** The official `pages/devices` screen: saved Studios, pairing, account menu. */
+    Devices,
+}
+
+/** The official `ApiRouteSwitch` options. Only [LAN] is reachable in this build. */
+object ApiRoute {
+    /** Direct connection to a Studio on this network — the app's whole point. */
+    const val LAN = "lan"
+
+    /**
+     * The vendor's cloud relay (`cloudflare` / `official` upstream). The official
+     * UI offers it; this build deliberately cannot select it, because there is no
+     * cloud account to relay through and pretending otherwise would be a lie in
+     * the UI. Kept as a constant so the disabled option is a real, named option.
+     */
+    const val CLOUD = "cloud"
 }
 
 /** Settings is a short list of these; each opens its own screen. */
@@ -132,6 +147,8 @@ data class UiState(
     val appearance: String = "dark",
     /** Saved Studio deployments, newest first. The active one is [baseUrl]. */
     val instances: List<StudioInstance> = emptyList(),
+    /** Official `pages/devices` runtime state — see [DevicesUi]. */
+    val devicesUi: DevicesUi = DevicesUi(),
     /** .remember-check: an account and password kept on this device for the login form. */
     val rememberCredentials: Boolean = false,
     val savedUsername: String = "",
@@ -250,6 +267,50 @@ data class WeixinQrUi(
     val url: String = "",
 )
 
+/**
+ * What the last reachability pass learned about one saved Studio.
+ *
+ * The official page gets this from the cloud's device-status endpoint; a direct
+ * connection has no broker, so the equivalent is `GET /api/auth/me` against the
+ * saved URL with its saved token — the same "cheap check that a stored token is
+ * still valid" the sign-in path uses.
+ */
+data class DeviceProbe(
+    val online: Boolean = false,
+    /** Account name reported by the device, for the `.device-system` fallback. */
+    val username: String = "",
+    /** Active Studio web-client version, i.e. the official `hermes_web_ui_version`. */
+    val webUiVersion: String = "",
+    /** Server platform, i.e. the official `metadata.os`. */
+    val platform: String = "",
+    val checkedAt: Long = 0,
+)
+
+/**
+ * Runtime state of the official `pages/devices` screen (scope `data-v-61a2f361`).
+ *
+ * [checking] is the official `ve(device)` predicate that renders the card's
+ * 检测中 pill; [probes] is the per-device result behind 在线/离线 and the
+ * "Studio &lt;version&gt;" cell.
+ */
+data class DevicesUi(
+    val checking: Set<String> = emptySet(),
+    val probes: Map<String, DeviceProbe> = emptyMap(),
+    /** Official `fe(device)`: the card currently opening, i.e. 连接中. */
+    val connecting: String? = null,
+    /** Official `Ee(device)`: the card currently being removed, i.e. 删除中. */
+    val deleting: String? = null,
+    /** The pairing/rename panel's submit button is running. */
+    val saving: Boolean = false,
+    /** Official `ApiRouteSwitch` selection. Only [ApiRoute.LAN] can be chosen. */
+    val route: String = ApiRoute.LAN,
+) {
+    fun probe(url: String): DeviceProbe? = probes[url]
+
+    /** Official `ve(device)`: a probe for this device is in flight. */
+    fun isChecking(url: String): Boolean = url in checking
+}
+
 class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     private val store = Store(app)
@@ -266,6 +327,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private var roomJob: kotlinx.coroutines.Job? = null
     private var roomLoadJob: kotlinx.coroutines.Job? = null
     private var weixinQrJob: Job? = null
+    /** The official `pages/devices` reachability pass; restarted on every refresh. */
+    private var probeJob: Job? = null
     private var openingRoomId: String? = null
     private var activeRunSessionId: String? = null
     private val resumePageIds = mutableMapOf<String, String>()
@@ -289,6 +352,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             language = store.language,
             appearance = store.appearance,
             instances = store.instances,
+            devicesUi = DevicesUi(route = store.apiRoute),
             rememberCredentials = store.rememberCredentials,
             savedUsername = store.savedUsername,
             savedPassword = store.savedPassword,
@@ -375,14 +439,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         restoreSession()
     }
 
-    fun login(baseUrl: String, username: String, password: String, remember: Boolean = false) {
+    fun login(baseUrl: String, username: String, password: String, remember: Boolean = false, label: String = "") {
         val normalized = normalizeUrl(baseUrl)
         if (normalized == null) {
-            _state.update { it.copy(error = str(R.string.error_server_address)) }
+            _state.update { it.copy(error = str(R.string.error_server_address), devicesUi = it.devicesUi.copy(saving = false)) }
             return
         }
         if (username.isBlank() || password.isBlank()) {
-            _state.update { it.copy(error = str(R.string.error_credentials_required)) }
+            _state.update { it.copy(error = str(R.string.error_credentials_required), devicesUi = it.devicesUi.copy(saving = false)) }
             return
         }
 
@@ -402,23 +466,48 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     store.savedUsername = ""
                     store.savedPassword = ""
                 }
+                // [label] is the official pairing panel's 设备名称; the login form
+                // leaves it blank and the host stands in.
+                val deviceName = label.trim().take(40).ifBlank { hostLabel(normalized) }
                 store.instances = upsertInstance(
                     store.instances,
                     StudioInstance(
                         url = normalized,
-                        label = hostLabel(normalized),
+                        label = deviceName,
                         username = username.trim(),
                         token = token,
                         lastUsedAt = System.currentTimeMillis(),
+                        endpointKind = DEFAULT_ENDPOINT_KIND,
                     ),
                 )
                 api.update(normalized, token)
                 chat.update(normalized, token)
                 group.update(normalized, token)
                 val user = api.currentUser()
-                SessionBootstrap(user, api.profiles(), api.sessions(null))
+                val versions = runCatching { api.runtimeVersions() }.getOrNull()
+                SessionBootstrap(user, api.profiles(), api.sessions(null)) to versions
             },
-            onSuccess = { (user, profiles, sessions) ->
+            onSuccess = { (bootstrap, versions) ->
+                val (user, profiles, sessions) = bootstrap
+                if (versions != null) {
+                    rememberDeviceDetails(
+                        normalized,
+                        DeviceProbe(
+                            online = true,
+                            username = user.username,
+                            webUiVersion = versions.activeWebUi,
+                            platform = versions.platform,
+                            checkedAt = System.currentTimeMillis() / 1000,
+                        ),
+                        user.username,
+                    )
+                } else {
+                    rememberDeviceDetails(
+                        normalized,
+                        DeviceProbe(online = true, username = user.username, checkedAt = System.currentTimeMillis() / 1000),
+                        user.username,
+                    )
+                }
                 _state.update {
                     it.copy(
                         screen = Screen.Chats,
@@ -429,10 +518,21 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                         activeProfile = pickProfile(profiles),
                         sessions = sessions,
                         instances = store.instances,
+                        devicesUi = it.devicesUi.copy(saving = false),
                         error = null,
                     )
                 }
                 syncBranding()
+            },
+            onFailure = { failure ->
+                // The pairing panel's submit spinner is driven by `saving`, which
+                // `launchWork` knows nothing about.
+                _state.update {
+                    it.copy(
+                        error = failure.readableMessage(localized),
+                        devicesUi = it.devicesUi.copy(saving = false),
+                    )
+                }
             },
         )
     }
@@ -2227,6 +2327,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 toolReturnScreen = when (it.screen) {
                     Screen.AgentHub -> Screen.AgentHub
                     Screen.MoreSettings -> Screen.MoreSettings
+                    // The devices account popover opens 关于; back must return there.
+                    Screen.Devices -> Screen.Devices
                     else -> Screen.Settings
                 },
                 error = null,
@@ -2799,12 +2901,128 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** Settings itself only needs the channel counts and the default model. */
-    /** Opens the saved-instance list (HStudio's device picker). */
-    fun openInstances() {
-        _state.update { it.copy(screen = Screen.Instances, error = null, notice = null) }
+
+    // ── official pages/devices ────────────────────────────────────────────
+
+    /**
+     * Opens the devices screen and starts the reachability pass.
+     *
+     * The official page does the same on mount: render the locally known devices
+     * immediately, mark every one of them 检测中, then settle each card on
+     * 在线/离线 as its probe returns.
+     */
+    fun openDevices() {
+        _state.update { it.copy(screen = Screen.Devices, error = null, notice = null) }
+        probeDevices()
     }
 
-    /** Points every client at another saved deployment and reloads its sessions. */
+    /** The official `.retry-action` ("重新同步") on the in-grid error state. */
+    fun refreshDevices() = probeDevices()
+
+    /**
+     * The official `pe(devices)` / `ge(device)` pass: every saved Studio is asked
+     * who it is, using its own URL and its own token, so the list can show real
+     * presence instead of "the one we happen to be connected to".
+     *
+     * Devices are probed concurrently and the results are committed as they
+     * arrive — a slow or unreachable Studio must not hold up the others.
+     */
+    private fun probeDevices() {
+        val targets = store.instances
+        if (targets.isEmpty()) {
+            _state.update { it.copy(devicesUi = it.devicesUi.copy(checking = emptySet())) }
+            return
+        }
+        probeJob?.cancel()
+        _state.update {
+            it.copy(devicesUi = it.devicesUi.copy(checking = targets.map { t -> t.url }.toSet()))
+        }
+        probeJob = viewModelScope.launch {
+            targets.forEach { item ->
+                launch {
+                    val probe = withContext(Dispatchers.IO) {
+                        runCatching {
+                            // A throwaway client: probing must never move the
+                            // shared api/chat clients off the active Studio.
+                            val client = HermesApi(item.url, item.token)
+                            val username = client.verifyToken()
+                            val versions = runCatching { client.runtimeVersions() }.getOrNull()
+                            DeviceProbe(
+                                online = true,
+                                username = username,
+                                webUiVersion = versions?.activeWebUi.orEmpty(),
+                                platform = versions?.platform.orEmpty(),
+                                checkedAt = System.currentTimeMillis() / 1000,
+                            )
+                        }.getOrElse { DeviceProbe(online = false, checkedAt = System.currentTimeMillis() / 1000) }
+                    }
+                    _state.update { state ->
+                        state.copy(
+                            devicesUi = state.devicesUi.copy(
+                                checking = state.devicesUi.checking - item.url,
+                                probes = state.devicesUi.probes + (item.url to probe),
+                            ),
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Official `he(device)`: tapping a card opens that Studio.
+     *
+     * [switchInstance] does the actual pointing; this wrapper only adds the
+     * 连接中 card state and turns a failure into a card-level error rather than
+     * dropping the user on an empty Loading screen.
+     */
+    fun connectDevice(url: String) {
+        val target = store.instances.firstOrNull { it.url == url.trimEnd('/') } ?: return
+        if (target.url == store.baseUrl && store.token.isNotBlank()) {
+            _state.update { it.copy(screen = Screen.Chats, error = null) }
+            return
+        }
+        _state.update { it.copy(devicesUi = it.devicesUi.copy(connecting = target.url), error = null) }
+        viewModelScope.launch {
+            val probe = withContext(Dispatchers.IO) {
+                runCatching {
+                    val client = HermesApi(target.url, target.token)
+                    val username = client.verifyToken()
+                    val versions = runCatching { client.runtimeVersions() }.getOrNull()
+                    DeviceProbe(
+                        online = true,
+                        username = username,
+                        webUiVersion = versions?.activeWebUi.orEmpty(),
+                        platform = versions?.platform.orEmpty(),
+                        checkedAt = System.currentTimeMillis() / 1000,
+                    )
+                }.getOrElse { DeviceProbe(online = false, checkedAt = System.currentTimeMillis() / 1000) }
+            }
+            _state.update {
+                it.copy(devicesUi = it.devicesUi.copy(connecting = null, probes = it.devicesUi.probes + (target.url to probe)))
+            }
+            if (probe.online) {
+                // What the probe learned is worth keeping: the card renders
+                // "Studio <version>" and the OS family from here on, the way the
+                // official app caches device metadata on connect.
+                rememberDeviceDetails(
+                    target.url,
+                    probe,
+                    if (target.username.isBlank()) probe.username else target.username,
+                )
+                switchInstance(target.url)
+            } else {
+                _state.update { it.copy(error = str(R.string.devices_unreachable, target.host)) }
+            }
+        }
+    }
+
+    /**
+     * Points every client at another saved deployment and reloads its sessions.
+     *
+     * The official `he(device)` lands on `pages/index`; this app's equivalent
+     * entry point is the chats list of the newly active Studio.
+     */
     fun switchInstance(url: String) {
         val target = store.instances.firstOrNull { it.url == url.trimEnd('/') } ?: return
         if (target.url == store.baseUrl) {
@@ -2835,23 +3053,109 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         restoreSession()
     }
 
-    /** The login form doubles as "add another instance". */
-    fun addInstance() {
-        _state.update { it.copy(screen = Screen.Login, error = null) }
-    }
-
-    fun renameInstance(url: String, label: String) {
+    private fun rememberDeviceDetails(url: String, probe: DeviceProbe, username: String) {
         val updated = store.instances.map { item ->
-            if (item.url == url) item.copy(label = label.trim().ifBlank { item.host }) else item
+            if (item.url != url) {
+                item
+            } else {
+                item.copy(
+                    username = username,
+                    platform = probe.platform.ifBlank { item.platform },
+                    webUiVersion = probe.webUiVersion.ifBlank { item.webUiVersion },
+                    endpointKind = item.endpointKind.ifBlank { DEFAULT_ENDPOINT_KIND },
+                    lastSeenAt = if (probe.online) probe.checkedAt else item.lastSeenAt,
+                )
+            }
         }
         store.instances = updated
         _state.update { it.copy(instances = updated) }
     }
 
+    /** The login form doubles as "add another instance". */
+    fun addInstance() {
+        _state.update { it.copy(screen = Screen.Login, error = null) }
+    }
+
+    /**
+     * Official `.pairing-submit` in the manual-add panel: 设备连接 + 设备名称 +
+     * Studio 账号 + Studio 密码 → "登录并添加设备".
+     *
+     * This is the same sign-in the login screen runs, so it goes through
+     * [login] rather than duplicating the token exchange; the only additions are
+     * the device display name and the connection normaliser, which is a port of
+     * the official one (see [normalizeDeviceConnection]).
+     */
+    fun addDevice(connection: String, name: String, username: String, password: String) {
+        val url = normalizeDeviceConnection(connection)
+        if (url == null) {
+            _state.update { it.copy(error = str(R.string.devices_error_connection)) }
+            return
+        }
+        if (username.isBlank() || password.isBlank()) {
+            _state.update { it.copy(error = str(R.string.error_credentials_required)) }
+            return
+        }
+        val label = name.trim().take(40).ifBlank { hostLabel(url) }
+        _state.update { it.copy(devicesUi = it.devicesUi.copy(saving = true), error = null) }
+        login(url, username, password, remember = false, label = label)
+    }
+
+    fun renameInstance(url: String, label: String) {
+        val updated = store.instances.map { item ->
+            if (item.url == url) item.copy(label = label.trim().take(40).ifBlank { item.host }) else item
+        }
+        store.instances = updated
+        _state.update { it.copy(instances = updated, devicesUi = it.devicesUi.copy(saving = false)) }
+    }
+
+    /**
+     * Official `Se(device)` — the card's danger action. It removes the saved
+     * connection on this phone only; the Studio itself is untouched.
+     */
     fun removeInstance(url: String) {
+        // Official `Ee(device)` marks the card 删除中 while its removal is in
+        // flight. The write here is local, so the flag is set for the same
+        // reason the official one is — the branch is real, it is just rarely
+        // observable (see docs/parity/devices.md).
+        _state.update { it.copy(devicesUi = it.devicesUi.copy(deleting = url)) }
         val remaining = store.instances.filterNot { it.url == url }
         store.instances = remaining
-        _state.update { it.copy(instances = remaining) }
+        val wasActive = store.baseUrl == url
+        if (wasActive) {
+            val next = remaining.firstOrNull()
+            store.baseUrl = next?.url.orEmpty()
+            store.token = next?.token.orEmpty()
+            api.update(store.baseUrl, store.token)
+            chat.update(store.baseUrl, store.token)
+            group.update(store.baseUrl, store.token)
+        }
+        _state.update {
+            it.copy(
+                instances = remaining,
+                devicesUi = it.devicesUi.copy(deleting = null, probes = it.devicesUi.probes - url),
+                error = null,
+            )
+        }
+    }
+
+    /**
+     * The official `ApiRouteSwitch` picker. [ApiRoute.CLOUD] is rejected here
+     * rather than merely greyed out in the UI, so no future call site can route
+     * traffic at the vendor's cloud by accident.
+     */
+    fun setApiRoute(route: String) {
+        if (route != ApiRoute.LAN) {
+            _state.update { it.copy(error = str(R.string.devices_route_cloud_unavailable)) }
+            return
+        }
+        store.apiRoute = route
+        _state.update { it.copy(devicesUi = it.devicesUi.copy(route = route), error = null) }
+    }
+
+    /** The account popover's 关于 action, reachable from the devices screen. */
+    fun openAboutFromDevices() {
+        _state.update { it.copy(toolReturnScreen = Screen.Devices) }
+        openSettingsGroup(SettingsGroup.About)
     }
 
     fun openSettings() {
@@ -3165,7 +3469,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 Screen.Kanban, Screen.Skills, Screen.Plugins, Screen.Mcp, Screen.Pets, Screen.Insights, Screen.AgentRuntimes, Screen.Workflows, Screen.GlobalAgent, Screen.EkkoHub, Screen.Files, Screen.Logs, Screen.Connections, Screen.Journey, Screen.Webhooks, Screen.RuntimeVersions, Screen.Appearance -> Screen.AgentHub
                 Screen.Channels, Screen.SettingsGroup, Screen.CronJobs -> state.toolReturnScreen
                 Screen.Profiles -> state.profilesReturnScreen
-                Screen.Instances -> Screen.Chats
+                Screen.Devices -> Screen.Chats
                 Screen.MoreSettings -> Screen.Settings
                 else -> when (state.tab) {
                     Tab.Groups -> Screen.Groups

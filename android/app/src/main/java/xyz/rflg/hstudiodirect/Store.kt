@@ -76,6 +76,18 @@ class Store(context: Context) {
         get() = prefs.getString(KEY_APPEARANCE, "dark").orEmpty().ifBlank { "dark" }
         set(value) = prefs.edit().putString(KEY_APPEARANCE, value).apply()
 
+    /**
+     * Route the app dials, mirroring the official `ApiRouteSwitch` storage entry.
+     *
+     * Only [ApiRoute.LAN] is ever written: the official picker's other option is
+     * the vendor's cloud relay, and this build has no cloud account to relay
+     * through. The value is stored anyway so a future direct relay can reuse the
+     * same key without a migration.
+     */
+    var apiRoute: String
+        get() = prefs.getString(KEY_API_ROUTE, ApiRoute.LAN).orEmpty().ifBlank { ApiRoute.LAN }
+        set(value) = prefs.edit().putString(KEY_API_ROUTE, value).apply()
+
     var reasoningEffort: String
         get() = prefs.getString(KEY_REASONING, "").orEmpty()
         set(value) = prefs.edit().putString(KEY_REASONING, value).apply()
@@ -122,6 +134,7 @@ class Store(context: Context) {
         const val KEY_ONBOARDED = "onboarded"
         const val KEY_LANGUAGE = "language"
         const val KEY_APPEARANCE = "appearance"
+        const val KEY_API_ROUTE = "api_route"
         const val KEY_REMEMBER = "remember_credentials"
         const val KEY_SAVED_USER = "saved_username"
         const val KEY_SAVED_PASSWORD = "saved_password"

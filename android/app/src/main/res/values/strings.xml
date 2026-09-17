@@ -787,7 +787,7 @@
     <string name="profile_runtime_status">Runtime: %1$s</string>
     <string name="files_title">Studio Files</string><string name="files_hub_note">Browse and edit profile workspace files</string><string name="files_new_folder">New folder</string><string name="files_edit">Read or edit</string><string name="files_open_external">Open externally</string><string name="files_saved">File saved</string>
     <string name="logs_title">Logs</string><string name="logs_hub_note">Studio, bridge and agent diagnostics</string>
-    <string name="connections_title">Connections</string><string name="connections_hub_note">App Relay and paired Studio devices</string><string name="app_relay_title">App Relay</string><string name="devices_title">Devices</string><string name="connected">Connected</string><string name="disconnected">Disconnected</string><string name="connect">Connect</string><string name="disconnect">Disconnect</string><string name="refresh_pairing">New pairing code</string>
+    <string name="connections_title">Connections</string><string name="connections_hub_note">App Relay and paired Studio devices</string><string name="app_relay_title">App Relay</string><string name="devices_title">My devices</string><string name="connected">Connected</string><string name="disconnected">Disconnected</string><string name="connect">Connect</string><string name="disconnect">Disconnect</string><string name="refresh_pairing">New pairing code</string>
     <string name="insights_by_agent">By agent</string><string name="insights_daily">Daily usage</string>
     <string name="files_upload">Upload</string><string name="files_download">Download or open</string><string name="files_copy_to">Copy to path</string>
     <string name="authorize_lan">Authorize LAN</string><string name="authorize_cloud">Authorize cloud</string><string name="authorization_code">Authorization code</string><string name="app_connections_title">Authorized apps</string>
@@ -815,4 +815,66 @@
     <string name="instances_saved">Saved instances</string>
     <string name="instances_label_hint">Name (home, office…)</string>
     <string name="instances_delete_body">Remove this instance from this phone? The server is untouched.</string>
+
+    <!-- Official pages/devices (see docs/parity/devices.md) -->
+    <string name="devices_description">Manage your Ekko Studio</string>
+    <string name="devices_add_title">Add device</string>
+    <string name="devices_add_description">Scan a code or enter a device connection</string>
+    <string name="devices_loading">Reading devices</string>
+    <string name="devices_retry">Sync again</string>
+    <string name="devices_status_online">Online</string>
+    <string name="devices_status_offline">Offline</string>
+    <string name="devices_status_checking">Checking</string>
+    <string name="devices_status_connecting">Connecting</string>
+    <string name="devices_source_local">LAN</string>
+    <string name="devices_route_lan">Direct LAN</string>
+    <string name="devices_route_cloud">Cloud relay</string>
+    <string name="devices_route_title">Network route</string>
+    <string name="devices_route_description">Choose how this app reaches your device. Direct LAN is the only route this build supports.</string>
+    <string name="devices_route_switch_description">Choose the route used to reach Ekko Studio</string>
+    <string name="devices_route_cloud_unavailable">Cloud relay is not available in this build; the app only connects directly over your network.</string>
+    <string name="devices_endpoint_desktop">Desktop</string>
+    <string name="devices_endpoint_web">Web</string>
+    <string name="devices_studio_version">Studio %1$s</string>
+    <string name="devices_version_unknown">unknown</string>
+    <string name="devices_footer_online">Online now</string>
+    <string name="devices_footer_never">Not connected yet</string>
+    <string name="devices_footer_just_now">Online just now</string>
+    <string name="devices_footer_minutes">Online %1$d min ago</string>
+    <string name="devices_footer_hours">Online %1$d h ago</string>
+    <string name="devices_footer_days">Online %1$d d ago</string>
+    <string name="devices_action_rename">Rename</string>
+    <string name="devices_action_delete">Delete</string>
+    <string name="devices_action_deleting">Deleting</string>
+    <string name="devices_system_active">This device</string>
+    <string name="devices_system_fallback">Ekko Studio device</string>
+    <string name="devices_pairing_description">Choose how to connect a device.</string>
+    <string name="devices_method_scan">Scan to add</string>
+    <string name="devices_method_scan_description">Scan the LAN QR code from Studio</string>
+    <string name="devices_method_manual">Add manually</string>
+    <string name="devices_method_manual_description">Enter the LAN address and Studio account</string>
+    <string name="devices_manual_description">Sign in with any enabled Studio account to save this device.</string>
+    <string name="devices_field_connection">Device connection</string>
+    <string name="devices_field_connection_hint">Paste the device connection</string>
+    <string name="devices_field_name">Device name</string>
+    <string name="devices_field_name_hint">e.g. Studio PC</string>
+    <string name="devices_field_account">Studio account</string>
+    <string name="devices_field_account_hint">Enter the Studio account</string>
+    <string name="devices_field_password">Studio password</string>
+    <string name="devices_field_password_hint">Enter the Studio password</string>
+    <string name="devices_pairing_submit">Sign in and add device</string>
+    <string name="devices_pairing_submitting">Verifying device...</string>
+    <string name="devices_scan_description">Scan the LAN QR code Studio shows on its device page.</string>
+    <string name="devices_scan_unavailable">This build has no camera scanner yet. Paste the connection from the QR code instead.</string>
+    <string name="devices_scan_paste_instead">Paste the connection instead</string>
+    <string name="devices_rename_title">Rename device</string>
+    <string name="devices_rename_description">Set a name that is easy to recognise.</string>
+    <string name="devices_rename_submit">Save name</string>
+    <string name="devices_rename_saving">Saving...</string>
+    <string name="devices_account_entitlements">Account entitlements</string>
+    <string name="devices_account_entitlements_unavailable">Entitlement status unavailable</string>
+    <string name="devices_account_about">About Ekko Studio</string>
+    <string name="devices_account_logout">Sign out</string>
+    <string name="devices_unreachable">%1$s did not respond. Check that Studio is running on this network.</string>
+    <string name="devices_error_connection">Enter the device connection, e.g. http://192.168.1.5:8080</string>
 </resources>

@@ -786,7 +786,7 @@
     <string name="profile_runtime_status">حالة المحرك: %1$s</string>
     <string name="files_title">ملفات الاستديو</string><string name="files_hub_note">تصفح ملفات مساحة عمل البروفايل وتعديلها</string><string name="files_new_folder">مجلد جديد</string><string name="files_edit">قراءة أو تعديل</string><string name="files_open_external">فتح خارجيًا</string><string name="files_saved">تم حفظ الملف</string>
     <string name="logs_title">السجلات</string><string name="logs_hub_note">تشخيصات الاستديو والجسر والوكلاء</string>
-    <string name="connections_title">الاتصالات</string><string name="connections_hub_note">ترحيل التطبيق وأجهزة الاستديو المرتبطة</string><string name="app_relay_title">ترحيل التطبيق</string><string name="devices_title">الأجهزة</string><string name="connected">متصل</string><string name="disconnected">غير متصل</string><string name="connect">اتصال</string><string name="disconnect">قطع الاتصال</string><string name="refresh_pairing">رمز اقتران جديد</string>
+    <string name="connections_title">الاتصالات</string><string name="connections_hub_note">ترحيل التطبيق وأجهزة الاستديو المرتبطة</string><string name="app_relay_title">ترحيل التطبيق</string><string name="devices_title">أجهزتي</string><string name="connected">متصل</string><string name="disconnected">غير متصل</string><string name="connect">اتصال</string><string name="disconnect">قطع الاتصال</string><string name="refresh_pairing">رمز اقتران جديد</string>
     <string name="insights_by_agent">حسب الوكيل</string><string name="insights_daily">الاستهلاك اليومي</string>
     <string name="files_upload">رفع ملف</string><string name="files_download">تنزيل أو فتح</string><string name="files_copy_to">نسخ إلى مسار</string>
     <string name="authorize_lan">تفويض شبكة LAN</string><string name="authorize_cloud">تفويض سحابي</string><string name="authorization_code">رمز التفويض</string><string name="app_connections_title">التطبيقات المفوّضة</string>
@@ -814,4 +814,66 @@
     <string name="instances_saved">الخوادم المحفوظة</string>
     <string name="instances_label_hint">الاسم (المنزل، المكتب…)</string>
     <string name="instances_delete_body">إزالة هذا الخادم من هذا الهاتف؟ لا يتأثر الخادم.</string>
+
+    <!-- Official pages/devices (see docs/parity/devices.md) -->
+    <string name="devices_description">إدارة Ekko Studio الخاصة بك</string>
+    <string name="devices_add_title">إضافة جهاز</string>
+    <string name="devices_add_description">امسح رمزًا أو أدخل اتصال الجهاز</string>
+    <string name="devices_loading">جارٍ قراءة الأجهزة</string>
+    <string name="devices_retry">مزامنة مرة أخرى</string>
+    <string name="devices_status_online">متصل</string>
+    <string name="devices_status_offline">غير متصل</string>
+    <string name="devices_status_checking">قيد الفحص</string>
+    <string name="devices_status_connecting">جارٍ الاتصال</string>
+    <string name="devices_source_local">شبكة محلية</string>
+    <string name="devices_route_lan">اتصال مباشر بالشبكة المحلية</string>
+    <string name="devices_route_cloud">ترحيل سحابي</string>
+    <string name="devices_route_title">مسار الشبكة</string>
+    <string name="devices_route_description">اختر كيفية وصول هذا التطبيق إلى جهازك. الاتصال المباشر بالشبكة المحلية هو المسار الوحيد المدعوم في هذا الإصدار.</string>
+    <string name="devices_route_switch_description">اختر المسار المستخدم للوصول إلى Ekko Studio</string>
+    <string name="devices_route_cloud_unavailable">الترحيل السحابي غير متوفر في هذا الإصدار؛ يتصل التطبيق مباشرة عبر شبكتك فقط.</string>
+    <string name="devices_endpoint_desktop">سطح المكتب</string>
+    <string name="devices_endpoint_web">الويب</string>
+    <string name="devices_studio_version">Studio %1$s</string>
+    <string name="devices_version_unknown">غير معروف</string>
+    <string name="devices_footer_online">متصل الآن</string>
+    <string name="devices_footer_never">لم يتصل بعد</string>
+    <string name="devices_footer_just_now">متصل قبل قليل</string>
+    <string name="devices_footer_minutes">متصل قبل %1$d دقيقة</string>
+    <string name="devices_footer_hours">متصل قبل %1$d ساعة</string>
+    <string name="devices_footer_days">متصل قبل %1$d يوم</string>
+    <string name="devices_action_rename">إعادة التسمية</string>
+    <string name="devices_action_delete">حذف</string>
+    <string name="devices_action_deleting">جارٍ الحذف</string>
+    <string name="devices_system_active">هذا الجهاز</string>
+    <string name="devices_system_fallback">جهاز Ekko Studio</string>
+    <string name="devices_pairing_description">اختر طريقة لتوصيل جهاز.</string>
+    <string name="devices_method_scan">إضافة بالمسح</string>
+    <string name="devices_method_scan_description">امسح رمز QR للشبكة المحلية من Studio</string>
+    <string name="devices_method_manual">إضافة يدويًا</string>
+    <string name="devices_method_manual_description">أدخل عنوان الشبكة المحلية وحساب Studio</string>
+    <string name="devices_manual_description">سجّل الدخول بأي حساب Studio مُفعّل لحفظ هذا الجهاز.</string>
+    <string name="devices_field_connection">اتصال الجهاز</string>
+    <string name="devices_field_connection_hint">الصق اتصال الجهاز</string>
+    <string name="devices_field_name">اسم الجهاز</string>
+    <string name="devices_field_name_hint">مثال: حاسوب الاستديو</string>
+    <string name="devices_field_account">حساب Studio</string>
+    <string name="devices_field_account_hint">أدخل حساب Studio</string>
+    <string name="devices_field_password">كلمة مرور Studio</string>
+    <string name="devices_field_password_hint">أدخل كلمة مرور Studio</string>
+    <string name="devices_pairing_submit">سجّل الدخول وأضف الجهاز</string>
+    <string name="devices_pairing_submitting">جارٍ التحقق من الجهاز...</string>
+    <string name="devices_scan_description">امسح رمز QR للشبكة المحلية الذي يعرضه Studio في صفحة أجهزته.</string>
+    <string name="devices_scan_unavailable">لا يتوفر ماسح ضوئي في هذا الإصدار. الصق الاتصال الموجود في رمز QR بدلاً من ذلك.</string>
+    <string name="devices_scan_paste_instead">الصق الاتصال بدلاً من ذلك</string>
+    <string name="devices_rename_title">إعادة تسمية الجهاز</string>
+    <string name="devices_rename_description">حدّد اسمًا يسهل تمييزه.</string>
+    <string name="devices_rename_submit">حفظ الاسم</string>
+    <string name="devices_rename_saving">جارٍ الحفظ...</string>
+    <string name="devices_account_entitlements">حقوق الحساب</string>
+    <string name="devices_account_entitlements_unavailable">حالة الحقوق غير متوفرة</string>
+    <string name="devices_account_about">حول Ekko Studio</string>
+    <string name="devices_account_logout">تسجيل الخروج</string>
+    <string name="devices_unreachable">%1$s لم يستجب. تأكد من تشغيل Studio على هذه الشبكة.</string>
+    <string name="devices_error_connection">أدخل اتصال الجهاز، مثال http://192.168.1.5:8080</string>
 </resources>

@@ -302,6 +302,7 @@ private fun AppContent(state: UiState, viewModel: AppViewModel) {
         Screen.MoreSettings, Screen.SettingsGroup, Screen.Channels, Screen.Channel, Screen.CronJobs,
         Screen.CronJob, Screen.CronHistory, Screen.Kanban, Screen.KanbanTask, Screen.Skills,
         Screen.Skill, Screen.Plugins, Screen.Mcp, Screen.Pets, Screen.Insights, Screen.AgentRuntimes, Screen.Workflows, Screen.GlobalAgent, Screen.EkkoHub, Screen.Files, Screen.Logs, Screen.Connections, Screen.Journey, Screen.Webhooks, Screen.RuntimeVersions, Screen.Appearance,
+        Screen.Devices,
         -> BackHandler { viewModel.back() }
         Screen.Groups, Screen.AgentHub -> BackHandler { viewModel.showTab(Tab.Chats) }
         else -> Unit
@@ -353,7 +354,7 @@ private fun AppContent(state: UiState, viewModel: AppViewModel) {
         Screen.Conversation -> ConversationScreen(state, viewModel)
         Screen.Room -> RoomScreen(state, viewModel)
         Screen.Profiles -> ProfilesScreen(state, viewModel)
-        Screen.Instances -> InstancesScreen(state, viewModel)
+        Screen.Devices -> DevicesScreen(state, viewModel)
     }
 }
 
@@ -899,8 +900,8 @@ private fun ChatsScreen(state: UiState, viewModel: AppViewModel) {
                     IconButton(onClick = { viewModel.startNewConversation() }) {
                         Icon(Icons.Filled.Edit, contentDescription = stringResource(R.string.action_new_chat), tint = MaterialTheme.colorScheme.primary)
                     }
-                    IconButton(onClick = { viewModel.openInstances() }) {
-                        Icon(Icons.Filled.Dns, contentDescription = stringResource(R.string.instances_title), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    IconButton(onClick = { viewModel.openDevices() }) {
+                        Icon(Icons.Filled.Dns, contentDescription = stringResource(R.string.devices_title), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     ThemeToggle(state, viewModel)
                 },
@@ -960,75 +961,9 @@ private fun ChatsScreen(state: UiState, viewModel: AppViewModel) {
     }
 }
 
-@Composable
-private fun InstancesScreen(state: UiState, viewModel: AppViewModel) {
-    var rename by remember { mutableStateOf<StudioInstance?>(null) }
-    var confirmRemove by remember { mutableStateOf<StudioInstance?>(null) }
-    val active = state.baseUrl.trimEnd('/')
-
-    rename?.let { target ->
-        TextPromptDialog(
-            title = stringResource(R.string.action_rename),
-            initial = target.label,
-            hint = stringResource(R.string.instances_label_hint),
-            action = stringResource(R.string.action_save),
-            onConfirm = { viewModel.renameInstance(target.url, it); rename = null },
-            onDismiss = { rename = null },
-        )
-    }
-    confirmRemove?.let { target ->
-        ConfirmDialog(
-            title = stringResource(R.string.action_delete),
-            body = stringResource(R.string.instances_delete_body),
-            action = stringResource(R.string.action_delete),
-            danger = true,
-            onConfirm = { viewModel.removeInstance(target.url); confirmRemove = null },
-            onDismiss = { confirmRemove = null },
-        )
-    }
-
-    Scaffold(
-        topBar = {
-            StudioTopBar(
-                title = stringResource(R.string.instances_title),
-                onBack = { viewModel.back() },
-                actions = {
-                    IconButton(onClick = { viewModel.addInstance() }) {
-                        Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.instances_add))
-                    }
-                },
-            )
-        },
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .verticalScroll(rememberScrollState())
-                .padding(StudioHorizontalPadding),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            if (state.instances.isEmpty()) {
-                EmptyNote(stringResource(R.string.instances_empty))
-            } else {
-                StudioGroupedCard {
-                    state.instances.forEachIndexed { index, item ->
-                        InstanceRow(
-                            item = item,
-                            active = item.url.trimEnd('/') == active,
-                            onSwitch = { viewModel.switchInstance(item.url) },
-                            onRename = { rename = item },
-                            onRemove = { confirmRemove = item },
-                        )
-                        if (index < state.instances.lastIndex) {
-                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
+// The saved-Studio list that used to live here is now the official
+// `pages/devices` screen — see DevicesScreen.kt. InstanceRow below is still
+// used by the login screen's saved-account list.
 
 /** One saved Studio: label, host, account, and where it is the active one. */
 @OptIn(ExperimentalFoundationApi::class)
