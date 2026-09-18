@@ -73,9 +73,19 @@ Notes on each:
 
 | Official | Why |
 |---|---|
-| `.social-login-button`, `.google-login-button`, `.apple-login-button` | Authenticate against the vendor's cloud. Direct-connect has no equivalent; adding dead buttons would be worse than omitting them. |
+| `.social-login-button` (Google / GitHub), `.social-login-button.apple-login-button` (+ `--dark-surface` / `--pressed`) (Apple) | Authenticate against the vendor's cloud. Direct-connect has no equivalent; adding dead buttons would be worse than omitting them. |
 | `.verification-row`, `.verification-button` | Email verification codes, cloud-gated. |
 | `.legal-overlay`, `.legal-*` | Terms/privacy overlay. Should probably exist eventually for honesty, but the official text is vendor-specific. |
+
+> **Class names corrected 2026-09-19.** This table used to list
+> `.google-login-button` as the Google button's class. It is **dead CSS** — the
+> rule (48px, `1px solid var(--ink-border)`, radius 8px) exists in
+> `pages-login.css` in both releases, but no component ever emits the class:
+> 0 occurrences in `app-service.js`, statically or dynamically. The shipped
+> social row emits `social-login-button` for **both** Google and GitHub, and
+> `social-login-button apple-login-button` for Apple (adding
+> `apple-login-button--dark-surface` in the dark theme). Same failure mode as the
+> composer's `.input-*` — a rule compiled for a template that no longer exists.
 
 ## Real gaps on this page
 
@@ -83,8 +93,24 @@ Notes on each:
 |---|---|
 | `.api-route-switch`, `.api-route-compact-option`, `.api-route-heading` | **Not implemented.** The official login page lets the user pick between the cloud relay and a direct/LAN route. This project is *built around* direct connection and the official UI for it is missing. Highest-value remaining item on this page. |
 | `.remember-check`, `.terms-option` | `RememberCheck` exists (`MainActivity.kt:705`); the terms checkbox does not. |
-| `.request-state`, `.request-state-title` | No dedicated request/loading state block. |
 | `.auth-panel--compact` | Not modelled; the phone block is used unconditionally, which is correct for phones but means the tablet layout is unhandled. |
+
+> **A row was removed from this table 2026-09-19: `.request-state` /
+> `.request-state-title` are not a gap.** The rules exist in `pages-login.css`
+> (`.request-state`: `margin-top:24px; padding:18px; 1px solid var(--ink-border);
+> radius 8px; --ink-bg-secondary`; `.request-state-title`: 14px/600;
+> `.request-state-copy`: 11px/18px muted) but **0 components emit any of the
+> three**, in either release — dead CSS, not an unimplemented official element.
+> The live surfaces on this page are `.field-error` (`margin:6px 0 0 4px;
+> color:var(--ink-error); font-size:11px; line-height:17px`, inside a
+> `.field-group`) for per-field failures, and `.button-loading` (16×16, 2px
+> `currentColor` ring spinning `.8s`, `margin-right:9px`) inside
+> `.primary-button` while a request is in flight. The port has the busy half
+> (`MainActivity.kt:795`: a 16dp/2dp `CircularProgressIndicator`, though its gap
+> is `8.dp` where the official is `9px`) but **not** `.field-error` — it reports
+> login failures through the shared `ErrorNote` below the button
+> (`MainActivity.kt:508`), which is a different surface from the official's
+> per-field line. Worth a row of its own if the login page is revisited.
 
 ## Reproducing
 

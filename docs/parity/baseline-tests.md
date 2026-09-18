@@ -75,8 +75,15 @@ The distinction matters: none of the below is a runtime observation.
 |---|---|---|
 | Ink palette vs official APK tokens | `Theme.kt` parsed and compared against `docs/reference/apk-1.0.3/theme-tokens-*.json` | **1 real bug found and fixed** — see below |
 | Login page metrics | `pages-login.css` `@media (max-width:600px)` compared line-by-line | 5 mismatches found and fixed |
-| Composer container | `pages-index.css` `.input-wrapper` compared | radius matches; `min-height` gap recorded |
+| Composer container | `pages-index.css` `.composer-wrapper` compared | radius matches; `min-height` gap recorded |
 | APK baseline identity | SHA-256 + signing cert + patch-marker scan | confirmed 1.0.3 pristine |
+
+One row above was corrected on 2026-09-19 by the class-liveness pass: this check
+originally cited `.input-wrapper`, which is **dead CSS** — a leftover of the
+pre-rename composer in `AppSingleChatView` (`docs/parity/composer.md`). The
+metrics that were compared (`border-radius:18px`, `min-height:78px`, the card's
+background/border/shadow) are **identical** in the live `.composer-wrapper`, so
+the finding stands and only the class name was wrong.
 
 ### The palette bug this caught
 

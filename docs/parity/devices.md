@@ -102,7 +102,8 @@ Text (from the render function, `$t()` keys → the zh values the app ships):
 | `Xe(device)` — `metadata.os` → Apple/Windows/Linux, else product name | `deviceSystemLabel` | `Instances.kt` |
 | `nt(device)` / `at(device)` — `endpoint_kind` → desktop/web | `deviceEndpointKind` | `Instances.kt` |
 | `rt(device)` — last-seen buckets | `deviceAge` / `deviceAgeCount` | `Instances.kt` |
-| `Aa(connection)` — origin extraction (`connectionUrl=`/`url=` in a pasted payload, scheme+host+port, port range check) | `normalizeDeviceConnection` | `Instances.kt` || `ve(device)` — probe in flight → 检测中 | `DevicesUi.isChecking` | `AppViewModel.kt` |
+| `Aa(connection)` — origin extraction (`connectionUrl=`/`url=` in a pasted payload, scheme+host+port, port range check) | `normalizeDeviceConnection` | `Instances.kt` |
+| `ve(device)` — probe in flight → 检测中 | `DevicesUi.isChecking` | `AppViewModel.kt` |
 | `fe(device)` — card opening → 连接中 | `DevicesUi.connecting` | `AppViewModel.kt` |
 | `Ee(device)` — removal in flight → 删除中 | `DevicesUi.deleting` | `AppViewModel.kt` |
 | `pe()` / `ge(device)` — per-device reachability pass | `probeDevices()` | `AppViewModel.kt` |

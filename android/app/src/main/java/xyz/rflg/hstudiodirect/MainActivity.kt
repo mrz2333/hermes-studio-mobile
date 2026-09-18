@@ -88,6 +88,7 @@ import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.AccountTree
 import androidx.compose.material.icons.filled.Cable
@@ -150,6 +151,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.rememberDrawerState
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
@@ -1570,15 +1575,34 @@ private fun RoomScreen(state: UiState, viewModel: AppViewModel) {
 @Composable
 private fun ConversationScreen(state: UiState, viewModel: AppViewModel) {
     var draft by rememberSaveable { mutableStateOf("") }
-    val listState = rememberLazyListState()
-    val scope = rememberCoroutineScope()
-    val clipboard = LocalClipboardManager.current
-    var actionLine by remember { mutableStateOf<ChatLine?>(null) }
-    var replyingTo by remember { mutableStateOf<ChatLine?>(null) }
-    val conversationKey = state.openSession?.id ?: "new"
-    var reachedInitialBottom by remember(conversationKey) { mutableStateOf(false) }
-    val lifecycleOwner = LocalLifecycleOwner.current
-    var clarification by rememberSaveable(state.pendingRunAction?.id) { mutableStateOf("") }
+    val drawerState = rememberDrawerState(DrawerValue.Closed)
+    // Drawer content: sessions list, search, new chat
+    val drawerContent = { 
+        ModalDrawerSheet {
+            Column(Modifier.fillMaxHeight()) {
+                TextButton(
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    onClick = { viewModel.startNewConversation(); drawerState.close() }
+                ) { Text(stringResource(R.string.action_new_chat)) }
+                ProfileFilterRow(state, viewModel)
+                StudioSearchField(value = state.sessionSearch, onValueChange = { viewModel.searchSessions(it) })
+                val sessions = remember(state.sessions) { state.sessions.toTypedArray() }
+                LazyColumn(Modifier.fillMaxSize()) {
+                    sessions.forEach { session ->
+                        SessionRow(
+                            session = session,
+                            avatar = state.avatarOf(session.profile),
+                            isActive = state.openSession?.id == session.id,
+                            onClick = { viewModel.openSession(session); drawerState.close() },
+                            onLongClick = { /* manage = session */ },
+                        )
+                        StudioCardDivider(78.dp)
+                    }
+                }
+            }
+        }
+    }
+    LaunchedEffect(drawerState) { /* sync back handler */ }
 
     state.pendingRunAction?.let { action ->
         AlertDialog(
@@ -1911,8 +1935,8 @@ private fun ConversationTopBar(state: UiState, profile: String, avatar: AvatarSp
                 }
             },
             navigationIcon = {
-                IconButton(onClick = { viewModel.back() }) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.action_back))
+                IconButton(onClick = { drawerState.open() }) {
+                    Icon(Icons.Filled.Menu, stringResource(R.string.message_actions))
                 }
             },
             actions = {

@@ -4,6 +4,7 @@
 .gradle/
 .kotlin/
 out/
+__pycache__/
 
 # Platform build output and local configuration
 android/local.properties
