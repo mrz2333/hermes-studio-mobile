@@ -30,7 +30,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.drawBehind
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -196,7 +195,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.PathEffect
-import androidx.compose.ui.graphics.Size
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.graphicsLayer
@@ -2157,7 +2155,7 @@ private fun ThinkingTimeline(line: ChatLine) {
                         strokeWidth = 1.dp.toPx()
                     }
                     val y = size.height - 0.5f
-                    c.drawLine(0f, y, size.width, y, paint)
+                    c.drawLine(Offset(0f, y), Offset(size.width, y), paint)
                 }
             },
     ) {
