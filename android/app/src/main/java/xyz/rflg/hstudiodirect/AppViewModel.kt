@@ -24,6 +24,8 @@ enum class Screen {
     Kanban, KanbanTask, Skills, Skill, Plugins, Mcp, Pets, Insights, AgentRuntimes, Workflows, GlobalAgent, EkkoHub, Files, Logs, Connections, Journey, Webhooks, RuntimeVersions, Appearance,
     /** The official `pages/devices` screen: saved Studios, pairing, account menu. */
     Devices,
+    /** Official HStudio `pages/about` shell page. */
+    About,
 }
 
 /** The official `ApiRouteSwitch` options. Only [LAN] is reachable in this build. */
@@ -3152,10 +3154,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         _state.update { it.copy(devicesUi = it.devicesUi.copy(route = route), error = null) }
     }
 
-    /** The account popover's 关于 action, reachable from the devices screen. */
+    /** The account popover's official About shell page. */
     fun openAboutFromDevices() {
-        _state.update { it.copy(toolReturnScreen = Screen.Devices) }
-        openSettingsGroup(SettingsGroup.About)
+        _state.update { it.copy(screen = Screen.About, toolReturnScreen = Screen.Devices, error = null, notice = null) }
     }
 
     fun openSettings() {
@@ -3470,6 +3471,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 Screen.Channels, Screen.SettingsGroup, Screen.CronJobs -> state.toolReturnScreen
                 Screen.Profiles -> state.profilesReturnScreen
                 Screen.Devices -> Screen.Chats
+                Screen.About -> Screen.Devices
                 Screen.MoreSettings -> Screen.Settings
                 else -> when (state.tab) {
                     Tab.Groups -> Screen.Groups
