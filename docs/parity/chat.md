@@ -47,10 +47,15 @@ out of the stylesheet in this pass, not inferred.
 | `.input-placeholder` | `color: var(--ink-text-muted)` | `inkTextMuted(inkDark)` + `nowrap` ellipsis | ✅ match |
 | `.input-toolbar` | `min-height: 30px; margin-top: auto` | `Arrangement.SpaceBetween` pins the toolbar to the bottom | ✅ **fixed this pass** |
 | `.input-toolbar` | `justify-content: space-between; gap: 12px` | `SpaceBetween`; row gap not asserted | 🔶 partial |
-| `.input-context-meter` | `width: 34px; height: 3px; border-radius: 999px; background: var(--ink-border)` | see below | ❌ not yet |
-| `.input-context-meter-fill` | `background: var(--ink-text-muted)` | see below | ❌ not yet |
-| `.input-context-status--warning .input-context-meter-fill` | `background: #d59a2d` | see below | ❌ not yet |
-| `.input-context-status--danger .input-context-meter-fill` | `background: var(--ink-error)` | see below | ❌ not yet |
+| `.input-context-status` | `display: flex; align-items: center; gap: 6px; color: var(--ink-text-muted)` | `Row` + `spacedBy(6.dp)`, muted | ✅ **fixed this pass** (was a `Column`) |
+| `.input-context-label` | `max-width: 112px; font-size: 9px; line-height: 14px; ellipsis; nowrap` | `widthIn(max = 112.dp)`, `9.sp`/`14.sp`, ellipsis | ✅ **fixed this pass** |
+| `.input-context-meter` | `width: 34px; height: 3px; border-radius: 999px; background: var(--ink-border)` | `34.dp`×`3.dp`, `999.dp` radius, `inkBorder` track | ✅ **fixed this pass** (was a full-width bar, 84–122dp) |
+| `.input-context-meter-fill` | `height: 100%; background: var(--ink-text-muted)` | `fillMaxHeight().fillMaxWidth(pct)` | ✅ **fixed this pass** (fill was the *label's* colour, not muted) |
+| `.input-context-status--warning` | `color: #d59a2d` (whole row) | `CONTEXT_WARNING = 0xFFD59A2D` on row + fill | ✅ **fixed this pass** (was `0xFFC28A30`) |
+| `.input-context-status--danger` | `color: var(--ink-error)` (whole row) | `inkError(inkDark)` on row + fill | ✅ **fixed this pass** (was `colorScheme.error`) |
+| `.input-context-status--pressed` / `--disabled` | `opacity: .66` / `.52` | not applied | 🔶 unverified |
+| `.input-context-status` thresholds | `app-service.js`: `--warning: pct > 60 && pct <= 80`, `--danger: pct > 80` | same thresholds | ✅ match (confirmed in the bundle this pass) |
+| `.input-context-status` interaction | `role="button"`, aria-name 点击编辑上下文长度 | rendered read-only, no click handler | ⛔ intentionally absent (editing the context window is a Studio-side control this build does not open) |
 | `.toolbar-button[data-v-8aca294f]` | `min-width: 35px; height: 28px; padding: 0 4px 0 6px; gap: 3px; border-radius: 499.5px` | not compared | 🔶 unverified |
 | `.toolbar-button--circle` / `.voice-button` / `.send-button` | `width: 30px; min-width: 30px; height: 30px; padding: 0` | not compared | 🔶 unverified |
 | `.toolbar-button--disabled` / `.voice-button--disabled` | `opacity: .38` | not compared | 🔶 unverified |

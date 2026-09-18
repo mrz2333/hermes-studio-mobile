@@ -35,6 +35,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -2763,17 +2764,37 @@ private fun Composer(
     }
 }
 
+/**
+ * HStudio `.input-context-status` (official mobile chat, scope `8aca294f`).
+ *
+ * The official widget is a **row**, not a column: a 9px/14px muted label
+ * (max-width 112px, ellipsis) sits *beside* a fixed **34×3** ring — not above a
+ * full-width bar. The ring track is `--ink-border` and its fill is
+ * `--ink-text-muted`; only the `--warning` / `--danger` states recolour it.
+ * Thresholds are read out of the bundled `app-service.js`, where the class
+ * binding is `--warning: pct > 60 && pct <= 80` and `--danger: pct > 80`. The
+ * `--warning` colour is the literal `#d59a2d` and `--danger` is `--ink-error`,
+ * and in both states the *whole* row adopts that colour, so the label changes
+ * too. `--pressed` is `opacity: .66`, `--disabled` is `.52`. Upstream the widget
+ * is `role="button"` named 点击编辑上下文长度, but editing the context window is a
+ * Studio-side control this build does not open, so it is rendered read-only.
+ */
 @Composable
 private fun ContextUsage(state: UiState) {
-    val ratio = if (state.contextWindow > 0) {
-        (state.contextTokens.toFloat() / state.contextWindow.toFloat()).coerceIn(0f, 1f)
+    val inkDark = MaterialTheme.colorScheme.isInkDark()
+    val percent = if (state.contextWindow > 0) {
+        (state.contextTokens.toFloat() / state.contextWindow.toFloat() * 100f).coerceIn(0f, 100f)
     } else 0f
-    val color = when {
-        ratio > .8f -> MaterialTheme.colorScheme.error
-        ratio > .6f -> Color(0xFFC28A30)
-        else -> MaterialTheme.colorScheme.onSurfaceVariant
+    val rowColor = when {
+        percent > 80f -> inkError(inkDark)
+        percent > 60f -> CONTEXT_WARNING
+        else -> inkTextMuted(inkDark)
     }
-    Column(modifier = Modifier.widthIn(min = 84.dp, max = 122.dp)) {
+    Row(
+        modifier = Modifier.heightIn(min = 28.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
         Text(
             if (state.loadingContext) stringResource(R.string.context_loading)
             else if (state.contextWindow > 0) stringResource(
@@ -2781,18 +2802,32 @@ private fun ContextUsage(state: UiState) {
                 compactNumber(state.contextTokens),
                 compactNumber(state.contextWindow),
             ) else stringResource(R.string.context_unknown),
-            style = MaterialTheme.typography.labelSmall,
-            color = color,
+            style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp, lineHeight = 14.sp),
+            color = rowColor,
             maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.widthIn(max = 112.dp),
         )
-        LinearProgressIndicator(
-            progress = { ratio },
-            modifier = Modifier.fillMaxWidth().height(3.dp).clip(RoundedCornerShape(99.dp)),
-            color = color,
-            trackColor = MaterialTheme.colorScheme.outlineVariant,
-        )
+        // .input-context-meter: 34×3, --ink-border track, 999px radius.
+        Box(
+            modifier = Modifier
+                .width(34.dp)
+                .height(3.dp)
+                .clip(RoundedCornerShape(999.dp))
+                .background(inkBorder(inkDark)),
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .fillMaxWidth(percent / 100f)
+                    .background(rowColor),
+            )
+        }
     }
 }
+
+/** `.input-context-status--warning { color: #d59a2d }` — the official literal. */
+private val CONTEXT_WARNING = Color(0xFFD59A2D)
 
 private fun compactNumber(value: Long): String = when {
     value >= 1_000_000 -> "%.1fM".format(Locale.US, value / 1_000_000.0)
