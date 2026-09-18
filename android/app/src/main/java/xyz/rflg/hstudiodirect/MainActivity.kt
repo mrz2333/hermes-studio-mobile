@@ -2602,23 +2602,39 @@ private fun Composer(
         return
     }
 
-    // HStudio .composer-wrapper (official App): --ink-bg-card fill, 1px
-    // --ink-input-border hairline, 18px radius, fixed --ink-shadow-lg
-    // (0 8px 24px rgba(0,0,0,.09/.3)). There is no focus-color border rule.
+    // HStudio .input-wrapper (official mobile chat, scope 8aca294f):
+    // --ink-bg-card fill, 1px --ink-input-border hairline, 18px radius,
+    // --ink-shadow-lg, min-height 78px, padding 8px 12px 6px, column gap 4px.
+    // The mobile stylesheet has no focus/hover border-colour rule.
     val inkDark = MaterialTheme.colorScheme.isInkDark()
     Surface(
-        modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 8.dp, vertical = 7.dp),
+        // .chat-input-area is `padding: 8px 12px 0`; the 20px gutter lives in the
+        // @media (min-width:769px) block. Its bottom is 0 plus a separate
+        // `.safe-area-bottom { height: env(safe-area-inset-bottom); min-height:
+        // 12px }` block, which navigationBarsPadding() + 7dp approximate here.
+        modifier = Modifier.fillMaxWidth().navigationBarsPadding()
+            .padding(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 7.dp),
         shape = RoundedCornerShape(18.dp),
         color = inkCardBg(inkDark),
         border = BorderStroke(1.dp, inkInputBorder(inkDark)),
         tonalElevation = 0.dp,
         shadowElevation = 8.dp,
     ) {
-    Column(modifier = Modifier.fillMaxWidth().padding(top = 6.dp)) {
+    Column(
+        // .input-wrapper `min-height: 78px` is what stops the card collapsing to a
+        // single text line. SpaceBetween reproduces the `margin-top: auto` on
+        // .input-toolbar that pins the toolbar to the bottom of that 78px.
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 78.dp)
+            .padding(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 6.dp),
+        verticalArrangement = Arrangement.SpaceBetween,
+    ) {
         if (state.attachments.isNotEmpty() || state.attaching) {
-            // .composer-attachment-strip: nowrap horizontal scroll, gap 7px.
+            // .attachment-strip / .attachment-strip-content: nowrap inline-flex,
+            // gap 7px. Horizontal inset comes from .input-wrapper's 12px.
             Row(
-                modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp),
+                modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(7.dp),
             ) {
                 state.attachments.forEach { file ->
@@ -2631,7 +2647,7 @@ private fun Composer(
 
         if (state.recording || state.transcribing) {
             Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
@@ -2647,38 +2663,44 @@ private fun Composer(
             }
         }
 
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp),
-        ) {
-            // HStudio textarea: --ink-bg-input fill, 10px radius, 1px
-            // --ink-input-border hairline, 14sp text.
+        Row(modifier = Modifier.fillMaxWidth()) {
+            // HStudio .input-textarea (official mobile chat, scope 8aca294f):
+            // `background: transparent; border: 0; padding: 0; min-height: 24px;
+            // font-size: 14px; line-height: 1.5`. The field itself paints nothing
+            // — the rounded card is .input-wrapper — so the old OutlinedTextField
+            // fill + outline + 10px radius was a second box the official composer
+            // does not have.
             val inkDark = MaterialTheme.colorScheme.isInkDark()
-            OutlinedTextField(
-                value = draft,
-                onValueChange = onDraftChange,
-                placeholder = {
+            val fieldType = MaterialTheme.typography.bodyMedium.copy(
+                fontSize = 14.sp,
+                lineHeight = 21.sp, // 14px * 1.5
+            )
+            Box(modifier = Modifier.fillMaxWidth().heightIn(min = 24.dp)) {
+                BasicTextField(
+                    value = draft,
+                    onValueChange = onDraftChange,
+                    textStyle = fieldType.copy(color = inkTextPrimary(inkDark)),
+                    cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                    maxLines = 5,
+                    modifier = Modifier.fillMaxWidth().onFocusChanged {
+                        if (fieldFocused && !it.isFocused && draft.isBlank() && state.attachments.isEmpty()) {
+                            composerExpanded = false
+                        }
+                        fieldFocused = it.isFocused
+                    },
+                )
+                if (draft.isEmpty()) {
+                    // .input-placeholder: --ink-text-muted, nowrap + ellipsis.
                     Text(
                         stringResource(R.string.composer_hint),
+                        style = fieldType,
                         color = inkTextMuted(inkDark),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.align(Alignment.TopStart),
                     )
-                },
-                textStyle = MaterialTheme.typography.bodyMedium,
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = inkInputBg(inkDark),
-                    unfocusedContainerColor = inkInputBg(inkDark),
-                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                    unfocusedBorderColor = inkInputBorder(inkDark),
-                    cursorColor = MaterialTheme.colorScheme.primary,
-                ),
-                modifier = Modifier.fillMaxWidth().onFocusChanged {
-                    if (fieldFocused && !it.isFocused && draft.isBlank() && state.attachments.isEmpty()) {
-                        composerExpanded = false
-                    }
-                    fieldFocused = it.isFocused
-                },
-                maxLines = 5,
-                shape = RoundedCornerShape(10.dp),
-            )
+                }
+            }
         }
 
         // ----------  composer toolbar row: profile · model · reasoning · context  ----------

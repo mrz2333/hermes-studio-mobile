@@ -102,32 +102,33 @@ that the official page's *layout* still reserves space for them.
 
 ### A2. Devices (`pages/devices`)
 
-Ground truth: `css/pages-devices.css` (147 classes). Not yet implemented as a
-native Compose screen — device management currently surfaces through
-`Screen.Instances` and `Screen.Connections`, which are this project's own
-constructs, not the official page.
+Ground truth: `css/pages-devices.css` (147 classes). **Implemented natively since
+v1.9.2** — `DevicesScreen.kt` renders the official page as `Screen.Devices`, and
+the earlier project-specific `Screen.Instances` no longer exists. The per-value
+audit record is `docs/parity/devices.md`. Statuses below reflect that pass.
 
 | Official block | What it is | Compose status |
 |---|---|---|
-| `.device-grid`, `.device-card`, `.add-device-card` | device tiles + add tile | partial (via Instances) |
-| `.device-symbol`/`-screen`/`-stand` | illustrated device glyph | ❌ missing |
-| `.device-source-tag--local` / `--cloud` | **route provenance badge** | ❌ missing |
-| `.device-endpoint-tag--desktop` / `--web` | endpoint kind badge | ❌ missing |
-| `.device-route-tag` | active route badge | ❌ missing |
-| `.status-dot`, `.device-status--online` | presence | partial |
-| `.pairing-overlay`, `.pairing-panel`, `.method-list`, `.method-option` | add-device flow | partial (manual form only) |
-| `.api-route-switch`, `.api-route-compact-option` | **cloud vs LAN route picker** | ❌ missing |
-| `.account-popover`, `.account-entitlements` | account menu + cloud entitlement list | ❌ missing (correctly — cloud-only) |
-| `.account-logout`, `.account-delete`, `.account-about` | account actions | partial |
-| `.machine-id` | machine identifier row | ❌ missing |
-| `.loading-state`, `.error-state`, `.retry-action` | page states | partial |
+| `.device-grid`, `.device-card`, `.add-device-card` | device tiles + add tile | ✅ yes |
+| `.device-symbol`/`-screen`/`-stand` | illustrated device glyph | ✅ yes |
+| `.device-source-tag--local` / `--cloud` | **route provenance badge** | ✅ local on every device; `--cloud` tone exists but is unreachable |
+| `.device-endpoint-tag--desktop` / `--web` | endpoint kind badge | ✅ yes |
+| `.device-route-tag` | active route badge | ✅ yes |
+| `.status-dot`, `.device-status--online` | presence | ✅ yes |
+| `.pairing-overlay`, `.pairing-panel`, `.method-list`, `.method-option` | add-device flow | ✅ overlay + panel + manual form; scan-to-add is an entry whose step says it is not wired |
+| `.api-route-switch`, `.api-route-compact-option` | **cloud vs LAN route picker** | ✅ yes — cloud option rendered disabled with the reason stated |
+| `.account-popover`, `.account-entitlements` | account menu + cloud entitlement list | ✅ popover; entitlement block renders the official "unavailable" state, no fabricated plan |
+| `.account-logout`, `.account-delete`, `.account-about` | account actions | ✅ logout + about; delete-account deliberately absent (cloud-only) |
+| `.machine-id` | machine identifier row | ✅ yes |
+| `.loading-state`, `.error-state`, `.retry-action` | page states | ✅ yes |
 
-**The single most important gap in the whole matrix** is here: the official app
-ships a first-class `api-route-switch` for choosing between the cloud relay and a
-LAN/direct route, plus `device-source-tag--local`/`--cloud` badges that tell the
-user which route a device is on. This project's entire purpose is direct
-connection, yet the official UI affordance for it is unimplemented. That is the
-highest-value missing feature and it is *already* in the official design.
+**The route-picker gap is now closed.** The official app ships a first-class
+`api-route-switch` for choosing between the cloud relay and a LAN/direct route,
+plus `device-source-tag--local`/`--cloud` badges that tell the user which route a
+device is on. Both landed in v1.9.2 (`DevicesScreen.kt`). The cloud option is
+rendered disabled with the reason printed under the switch, and `setApiRoute`
+rejects anything other than LAN at the view-model level, so no future call site
+can route traffic at the vendor's cloud by mistake.
 
 Responsive breakpoints differ from login: devices uses `max-width: 520px` plus
 two landscape queries, not `max-width: 600px`.
@@ -239,7 +240,7 @@ unlocks it.
 | Group socket | `GroupSocket.kt` | ✅ present |
 | Chinese-first UI | `Locales.kt`, `values-zh-rCN/strings.xml` | ✅ present |
 | Encrypted credential store | `Store.kt` | ✅ present |
-| Official route picker UI | `api-route-switch` | ❌ missing (see A2) |
+| Official route picker UI | `api-route-switch` | ✅ present since v1.9.2 (cloud option disabled by design) |
 
 ---
 
@@ -265,8 +266,32 @@ Recorded plainly, because several earlier commits in this repo describe work as
 
 ## Highest-value next steps
 
-1. Re-audit `Conversation`/`Chats` against **v0.7.13** (not v0.7.18), and record
-   in `docs/parity/`.
-2. Implement the devices page (`pages/devices`) natively, including
-   `api-route-switch` and the `device-source-tag--local/--cloud` badges.
-3. Then Settings/Appearance, which are mostly token-driven and cheap.
+1. ~~Implement the devices page (`pages/devices`) natively, including
+   `api-route-switch` and the `device-source-tag--local/--cloud` badges.~~
+   **Done in v1.9.2** — see §A2 and `docs/parity/devices.md`.
+2. Re-audit `Conversation`/`Chats` against **v0.7.13** (not v0.7.18), and record
+   in `docs/parity/chat.md`. This is the largest unverified area.
+3. Finish the Composer audit: `docs/parity/composer.md` lists the unextracted
+   sub-elements (`.input-toolbar`, `.send-button`, `.attachment-chip`,
+   `.input-context-meter`) and the unasserted `.input-wrapper` `min-height: 78px`,
+   which is what stops the composer collapsing to one text line.
+4. Then Settings/Appearance, which are mostly token-driven and cheap.
+5. `pages/about` is still unimplemented (§A3) and
+   `social-messages/SocialMessagesView` has no Compose surface at all.
+6. Everything else in Part B is still `name`-level: each row needs a real
+   `v0.7.13` source comparison before it can be called replicated.
+
+## Build/test evidence (updated 2026-09-18)
+
+`docs/parity/baseline-tests.md` records that **this host** cannot build Android
+(aarch64 host; AGP resolves an x86-64-only `aapt2`, and Debian's ARM64 `aapt2`
+is build-tools 29.0.3 and cannot parse the android-35 resource table). That is
+still true.
+
+CI is the authoritative verification path. Every push to `main` runs
+`testDebugUnitTest` + `lintDebug` + `assembleRelease` on x86-64 `ubuntu-latest`
+and publishes a signed APK. Android CI on `2d7d72f` (v1.9.5) is **green**, so the
+Kotlin compiles and the 12 unit tests pass. Claims in `docs/parity/*.md` that say
+"not compiled" / "not run" describe the *host*, not CI — read them with that in
+mind. No row anywhere in this document is yet verified by a device screenshot
+except the v1.9.2 devices pass captured in `releases/v1.9.2-*.png`.
